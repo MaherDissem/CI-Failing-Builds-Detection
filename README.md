@@ -1,4 +1,4 @@
-# CI Failing Builds Detection
+# Failing CI Builds Prediction
 
 Continuous Integration is a set of modern Software Development practices widely adopted in commercial and open source environments that aim at supporting developers in integrating code changes constantly and quickly through an automated building and testing process.
 This enables them to discover newly induced errors before they reach the end-user.
