@@ -1,2 +1,4 @@
 dataset/
 **.xlsx
+checkpoints/
+runs/
