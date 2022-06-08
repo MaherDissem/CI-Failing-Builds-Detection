@@ -710,7 +710,7 @@ GAMMA = 0.99    # reward calc
 max_depth = 10
 use_meth_1 = True
 nbr_of_conv = 7
-n_episodes = 300
+n_episodes = 50
 
 
 
@@ -737,7 +737,7 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
 
     print(f'tree depth={max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
 
-    save_every = 20
+    save_every = 10
     os.system('mkdir -p checkpoints results')
     #os.system('rm -f checkpoints/*')
 
@@ -863,8 +863,8 @@ def cross_eval(valid_proj):
 
 # %%
 
-#device='cpu'
+device='cpu'
 
 for valid_proj in ['candybar-library.csv','GI.csv', 'mtsar.csv', 'ransack.csv', 'SemanticMediaWiki.csv', 'contextlogger.csv', 'grammarviz2_src.csv', 'parallec.csv', 'SAX.csv', 'solr-iso639-filter.csv', 'future.csv', 'groupdate.csv', 'pghero.csv', 'searchkick.csv', 'steve.csv']:
     within_eval(valid_proj)
-    cross_eval(valid_proj)
+    #cross_eval(valid_proj)
