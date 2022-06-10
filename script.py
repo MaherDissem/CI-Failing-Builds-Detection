@@ -699,20 +699,24 @@ from tqdm import tqdm
 
 
 # hyper-parameters
-HIDDEN_SIZE = 256
+HIDDEN_SIZE = 32
 BUFFER_SIZE = int(1e6)
-BATCH_SIZE = 256
+BATCH_SIZE = 64
 # learning rates
 LR_ACTOR = 1e-2  # change these!
 LR_CRITIC = 1e-2
 GAMMA = 0.99    # reward calc
 # size
-max_depth = 10
+max_depth = 5
 use_meth_1 = True
 nbr_of_conv = 7
-n_episodes = 50
+n_episodes = 100
 
+save_every = 10
 
+seed = 13
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 def train(X_train, X_val, y_train, y_val, df, eval_meth):
 
@@ -722,9 +726,6 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
 
     scores_deque = deque(maxlen=100)
     #writer = SummaryWriter("runs/") # for TensorBoard
-    seed = 42
-    np.random.seed(seed)
-    torch.manual_seed(seed)
     
     model = modDecisionTree(max_depth=max_depth)
     model.fit(X_train, y_train, df.columns)
@@ -733,11 +734,10 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
     threshold_vector_size = X_train.shape[1]
 
     state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
-    state_size = len(state)
+    state_size = len(state)+1
 
     print(f'tree depth={max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
 
-    save_every = 10
     os.system('mkdir -p checkpoints results')
     #os.system('rm -f checkpoints/*')
 
@@ -756,9 +756,9 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
         model = modDecisionTree(max_depth=max_depth)
         model.fit(X_train, y_train, df.columns)
         state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
+        state = torch.cat((torch.Tensor([0]), state)).to(device)
         global prev_metric 
         prev_metric = 0
-        avg_score = 0
 
         for t in tqdm(range(model.n_nodes)):
             if model.node_is_leaf(t):
@@ -766,25 +766,24 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
             action = agent.act(state)
         # print(f"node={t}: {model.features[t]}<{model.thresholds[t]} => {action[0]}<{action[1]}")
             next_state, reward, done, info = env_step(model, t, action, X_val, y_val)
+            next_state = torch.cat((torch.Tensor([t]), next_state)).to(device)
             agent.step(state, action, reward, next_state, done)
             state = next_state
             f1score = model.evaluate(X_val, y_val)['F1']
-            avg_score += f1score
             if done:
                 break
         
         # save checkpoint and validation results
         if i_episode % save_every==0:
             res = model.evaluate(X_val, y_val, False, True)
-            #print(res)
+            print(res)
             # agent.save_checkpoint(i_episode)
             with open(f'./results/ep{i_episode}-{eval_meth}.txt','w') as f:
                 f.write(str(res))
 
-        avg_score /= model.n_nodes
-        scores_deque.append(avg_score)
+        scores_deque.append(f1score)
         #writer.add_scalar("Average F1 score", avg_score, i_episode) # for TensorBoard
-        print(f'\rEpisode: {i_episode}, Average F1 score: {round(avg_score,2)}')
+        print(f'\rEpisode: {i_episode}, Tree F1 score: {round(f1score,2)}')
 
 
     print(f"final score: ", model.evaluate(X_val, y_val, False, True))
@@ -808,8 +807,9 @@ columns = ['ci_skipped', 'ns', 'nd', 'nf', 'entropy', 'la', 'ld', 'lt', 'ndev',
        'classif', 'prev_com_res', 'proj_recent_skip', 'comm_recent_skip',
        'same_committer', 'is_fix', 'day_week', 'CM', 'commit_hash']
 
-path = '/content/drive/MyDrive/CI/SkipCI-dataset'
-path = '/mnt/d/PFE/Papers Presentations/1SkipCI/SkipCI/dataset/'
+path = '/mnt/d/PFE/Papers Presentations/4DL-CIBuild (lstm)/DL-CIBuild/dataset/' ; cols_to_keep = 18
+path = '/content/drive/MyDrive/CI/SkipCI-dataset' ; cols_to_keep = 32
+path = '/mnt/d/PFE/Papers Presentations/1SkipCI/SkipCI/dataset/' ; cols_to_keep = 32
 
 # projects list: 
 # candybar-library.csv  GI.csv               mtsar.csv     ransack.csv     SemanticMediaWiki.csv
@@ -817,7 +817,6 @@ path = '/mnt/d/PFE/Papers Presentations/1SkipCI/SkipCI/dataset/'
 # future.csv            groupdate.csv        pghero.csv    searchkick.csv  steve.csv
 
 valid_proj = 'SemanticMediaWiki.csv'
-cols_to_keep = 32
 
 
 
@@ -865,6 +864,8 @@ def cross_eval(valid_proj):
 
 device='cpu'
 
-for valid_proj in ['candybar-library.csv','GI.csv', 'mtsar.csv', 'ransack.csv', 'SemanticMediaWiki.csv', 'contextlogger.csv', 'grammarviz2_src.csv', 'parallec.csv', 'SAX.csv', 'solr-iso639-filter.csv', 'future.csv', 'groupdate.csv', 'pghero.csv', 'searchkick.csv', 'steve.csv']:
-    within_eval(valid_proj)
-    #cross_eval(valid_proj)
+within_eval('SemanticMediaWiki.csv')
+
+# for valid_proj in ['candybar-library.csv','GI.csv', 'mtsar.csv', 'ransack.csv', 'SemanticMediaWiki.csv', 'contextlogger.csv', 'grammarviz2_src.csv', 'parallec.csv', 'SAX.csv', 'solr-iso639-filter.csv', 'future.csv', 'groupdate.csv', 'pghero.csv', 'searchkick.csv', 'steve.csv']:
+#     within_eval(valid_proj)
+#     cross_eval(valid_proj)
