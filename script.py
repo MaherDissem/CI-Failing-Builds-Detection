@@ -756,7 +756,7 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
         model = modDecisionTree(max_depth=max_depth)
         model.fit(X_train, y_train, df.columns)
         state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
-        state = torch.cat((torch.Tensor([0]), state)).to(device)
+        state = torch.cat((torch.Tensor([0]).to(device), state))
         global prev_metric 
         prev_metric = 0
 
@@ -766,7 +766,7 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
             action = agent.act(state)
         # print(f"node={t}: {model.features[t]}<{model.thresholds[t]} => {action[0]}<{action[1]}")
             next_state, reward, done, info = env_step(model, t, action, X_val, y_val)
-            next_state = torch.cat((torch.Tensor([t]), next_state)).to(device)
+            next_state = torch.cat((torch.Tensor([t]).to(device), next_state))
             agent.step(state, action, reward, next_state, done)
             state = next_state
             f1score = model.evaluate(X_val, y_val)['F1']
@@ -864,7 +864,7 @@ def cross_eval(valid_proj):
 
 device='cpu'
 
-within_eval('SemanticMediaWiki.csv')
+cross_eval('candybar-library.csv')
 
 # for valid_proj in ['candybar-library.csv','GI.csv', 'mtsar.csv', 'ransack.csv', 'SemanticMediaWiki.csv', 'contextlogger.csv', 'grammarviz2_src.csv', 'parallec.csv', 'SAX.csv', 'solr-iso639-filter.csv', 'future.csv', 'groupdate.csv', 'pghero.csv', 'searchkick.csv', 'steve.csv']:
 #     within_eval(valid_proj)
