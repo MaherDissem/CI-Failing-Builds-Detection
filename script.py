@@ -1,14 +1,18 @@
 # %%
 # !nvidia-smi
 
+# %% [markdown]
+# ### Data Loading
+
+# %%
+# from google.colab import drive
+# drive.mount('/content/drive')
 
 # %%
 import os
-from re import M
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
 
 # %% [markdown]
 # ### Modifiable Decision Tree model 
@@ -404,7 +408,7 @@ class ThresholdsNetwork(nn.Module):
 
 # %%
 class AttributeNetwork(nn.Module):
-    """Network that will select a new attribute for a tree node given the environment state and thresholds vector"""
+    """Network that will select a new attribute for a tree node given the environment state and thresholds vector."""
 
     def __init__(self, state_size, threshold_vector_size, number_of_attributes, seed, hidden_size=32):
         """Initialize parameters and build model.
@@ -552,11 +556,9 @@ class Agent():
 
     def learn(self, experiences, gamma):
         """Updates the two neural networks using given batch of experience tuples.
-        Critic_loss = 
-        Actor_loss = 
-        where:
-            actor_target(state) -> action
-            critic_target(state, action) -> Q-value
+            thresholds_target(state) -> Xt vector
+            attributes_target(state, Xt) -> Q-value
+            see paper/report for notation
         Params
         ======
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
@@ -664,7 +666,7 @@ class Agent():
 # %%
 prev_metric = 0
 
-def env_step(model, node, action, X_val, y_val):
+def env_step(model, node, action, X_train, y_train):
     """
         Environment step: updates the DT model given a node and an action
         and return the reward the new state of the tree.
@@ -675,16 +677,14 @@ def env_step(model, node, action, X_val, y_val):
     next_state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
     # calc reward
     global prev_metric
-    metrics = model.evaluate(X_val, y_val)
+    metrics = model.evaluate(X_train, y_train)
     current_metric = metrics['F1']
     reward = current_metric-prev_metric 
     prev_metric = current_metric
     done = 0
     if model.node_is_leaf(node):
-        done = 1
-        
+        done = 1    
     info = 0
-
     return next_state, reward, done, info 
 
 # %% [markdown]
@@ -696,52 +696,43 @@ def env_step(model, node, action, X_val, y_val):
 
 # %%
 from tqdm import tqdm
+import csv
 
+t0 = time.time()
 
-# hyper-parameters
+# DL hyper-parameters
 HIDDEN_SIZE = 32
 BUFFER_SIZE = int(1e6)
-BATCH_SIZE = 64
-# learning rates
-LR_ACTOR = 1e-2  # change these!
+BATCH_SIZE = 256
+LR_ACTOR = 1e-2   # change these!
 LR_CRITIC = 1e-2
-GAMMA = 0.99    # reward calc
-# size
-max_depth = 5
+# RL hyper-parameters
+GAMMA = 0.99      # reward calc
+n_episodes = 1000
+save_every = 1000
+# DT hyper-parameters 
+max_depth = 7
 use_meth_1 = True
-nbr_of_conv = 7
-n_episodes = 100
-
-save_every = 10
-
-seed = 13
+nbr_of_conv = 2
+# random seed
+seed = 42
 np.random.seed(seed)
 torch.manual_seed(seed)
 
-def train(X_train, X_val, y_train, y_val, df, eval_meth):
+def train(X_train, y_train, X_val, y_val, df, eval_meth):
 
-    t0 = time.time()
-    
-    print(eval_meth)
-
-    scores_deque = deque(maxlen=100)
-    #writer = SummaryWriter("runs/") # for TensorBoard
-    
+    # initialization 
     model = modDecisionTree(max_depth=max_depth)
     model.fit(X_train, y_train, df.columns)
-
     number_of_attributes = X_train.shape[1]
     threshold_vector_size = X_train.shape[1]
-
     state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
     state_size = len(state)+1
-
-    print(f'tree depth={max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
-
+    agent = Agent(state_size, threshold_vector_size, number_of_attributes, seed, HIDDEN_SIZE)
+    tb_writer = SummaryWriter("runs/") # for TensorBoard
     os.system('mkdir -p checkpoints results')
     #os.system('rm -f checkpoints/*')
 
-    agent = Agent(state_size, threshold_vector_size, number_of_attributes, seed, HIDDEN_SIZE)
     start_ep = 1 # do not change
 
     # load checkpoint (comment/uncomment)
@@ -750,9 +741,12 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
     # agent.load_checkpoint(start_ep-1)
     # 
 
+    print(f'tree depth={max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
+    print(f'Evaluation: {eval_meth}')
+
     for i_episode in range(start_ep, n_episodes+1):
 
-        # state reset => new DT model
+        # state init / reset => reset the DT model to initial values
         model = modDecisionTree(max_depth=max_depth)
         model.fit(X_train, y_train, df.columns)
         state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
@@ -760,46 +754,56 @@ def train(X_train, X_val, y_train, y_val, df, eval_meth):
         global prev_metric 
         prev_metric = 0
 
-        for t in tqdm(range(model.n_nodes)):
+        # for t in tqdm(range(model.n_nodes)):
+        for t in range(model.n_nodes):
             if model.node_is_leaf(t):
                 continue
             action = agent.act(state)
-        # print(f"node={t}: {model.features[t]}<{model.thresholds[t]} => {action[0]}<{action[1]}")
-            next_state, reward, done, info = env_step(model, t, action, X_val, y_val)
+            # print(f"node={t}: {model.features[t]}<={model.thresholds[t]} => {action[0]}<={action[1]}")
+            next_state, reward, done, info = env_step(model, t, action, X_train, y_train)
+            if reward<0:
+                break
             next_state = torch.cat((torch.Tensor([t]).to(device), next_state))
             agent.step(state, action, reward, next_state, done)
             state = next_state
-            f1score = model.evaluate(X_val, y_val)['F1']
+            res = model.evaluate(X_val, y_val, False, False)
+            f1score, AUC = res['F1'], res['AUC']
             if done:
                 break
         
-        # save checkpoint and validation results
+        # save checkpoint to resume training
         if i_episode % save_every==0:
-            res = model.evaluate(X_val, y_val, False, True)
-            print(res)
-            # agent.save_checkpoint(i_episode)
-            with open(f'./results/ep{i_episode}-{eval_meth}.txt','w') as f:
-                f.write(str(res))
+            agent.save_checkpoint(i_episode)
 
-        scores_deque.append(f1score)
-        #writer.add_scalar("Average F1 score", avg_score, i_episode) # for TensorBoard
-        print(f'\rEpisode: {i_episode}, Tree F1 score: {round(f1score,2)}')
+        # save results to a csv file
+        with open(f'./results/{eval_meth}.csv','a') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([i_episode, f1score, AUC])
 
+        # save results for Tensorboard
+        # tb_writer.add_scalar("Average F1 score", f1score, i_episode)
+
+        # display classification metrics
+        # print(f'\rEpisode: {i_episode}, F1 score: {round(f1score,2)}, AUC: {round(AUC,2)}')
 
     print(f"final score: ", model.evaluate(X_val, y_val, False, True))
-
     t1 = time.time()
-    print("training took {} min!\n".format((t1-t0)/60))
+    print("training took {} min!".format((t1-t0)/60))
 
 
 # %% [markdown]
-# ### Data Loading
+# #### Features Importance
 
 # %%
-# from google.colab import drive
-# drive.mount('/content/drive')
+# print(model.feature_importance())
+# model.plot_tree()
+#df.columns[8]
 
 # %%
+# print(model.evaluate(X_val, y_val, False, True))
+
+# %%
+
 # skipCI dataset
 columns = ['ci_skipped', 'ns', 'nd', 'nf', 'entropy', 'la', 'ld', 'lt', 'ndev',
        'age', 'nuc', 'exp', 'rexp', 'sexp', 'TFC', 'is_doc', 'is_build',
@@ -807,18 +811,39 @@ columns = ['ci_skipped', 'ns', 'nd', 'nf', 'entropy', 'la', 'ld', 'lt', 'ndev',
        'classif', 'prev_com_res', 'proj_recent_skip', 'comm_recent_skip',
        'same_committer', 'is_fix', 'day_week', 'CM', 'commit_hash']
 
-path = '/mnt/d/PFE/Papers Presentations/4DL-CIBuild (lstm)/DL-CIBuild/dataset/' ; cols_to_keep = 18
-path = '/content/drive/MyDrive/CI/SkipCI-dataset' ; cols_to_keep = 32
-path = '/mnt/d/PFE/Papers Presentations/1SkipCI/SkipCI/dataset/' ; cols_to_keep = 32
+path = '/content/drive/MyDrive/CI/SkipCI-dataset'
+path = '/mnt/d/PFE/Papers Presentations/1SkipCI/SkipCI/dataset/' 
+#path = '<path to dataset here>'
 
 # projects list: 
 # candybar-library.csv  GI.csv               mtsar.csv     ransack.csv     SemanticMediaWiki.csv
 # contextlogger.csv     grammarviz2_src.csv  parallec.csv  SAX.csv         solr-iso639-filter.csv
 # future.csv            groupdate.csv        pghero.csv    searchkick.csv  steve.csv
 
-valid_proj = 'SemanticMediaWiki.csv'
+valid_proj = 'candybar-library.csv'
+cols_to_keep = 32
+
+from sklearn.model_selection import train_test_split
 
 
+# %% [markdown]
+# #### Validation on all data
+
+# %%
+# df = pd.DataFrame(columns=columns, dtype='object')
+
+# for dirname, _, filenames in os.walk(path):
+#     for filename in filenames:
+#         if filename[-4:]==".csv":
+#             df = pd.concat([df, pd.read_csv(os.path.join(dirname, filename))])
+
+# X = df.iloc[:,1:cols_to_keep]
+# y = df.iloc[:,0].astype(int)
+
+# from sklearn.model_selection import train_test_split
+# X_train, X_val , y_train, y_val = train_test_split(np.array(X), np.array(y), test_size=0.2, shuffle=True, stratify=y, random_state=42) # keep ratio of classes in split
+
+# eval_meth = 'eval_on_all_data'
 
 # %% [markdown]
 # #### Within project validation
@@ -829,12 +854,12 @@ def within_eval(valid_proj):
     X = df.iloc[:,1:cols_to_keep]
     y = df.iloc[:,0].astype(int)
 
-    from sklearn.model_selection import train_test_split
     X_train, X_val , y_train, y_val = train_test_split(np.array(X), np.array(y), test_size=0.2, shuffle=True, stratify=y, random_state=42) # keep ratio of classes in split
 
     eval_meth = f'within_proj_{valid_proj}'[:-4]
 
-    train(X_train, X_val, y_train, y_val, df, eval_meth)
+    train(X_train, y_train, X_val, y_val, df, eval_meth)
+
 # %% [markdown]
 # #### Cross project validation
 
@@ -857,15 +882,14 @@ def cross_eval(valid_proj):
     y_val = np.array(df_val.iloc[:,0].astype(int))
 
     eval_meth = f'cross_proj_{valid_proj}'[:-4]
-
-    train(X_train, X_val, y_train, y_val, df, eval_meth)
+    train(X_train, y_train, X_val, y_val, df, eval_meth)
 
 # %%
 
-device='cpu'
+# device='cpu'
 
-cross_eval('candybar-library.csv')
+# within_eval('candybar-library.csv')
 
-# for valid_proj in ['candybar-library.csv','GI.csv', 'mtsar.csv', 'ransack.csv', 'SemanticMediaWiki.csv', 'contextlogger.csv', 'grammarviz2_src.csv', 'parallec.csv', 'SAX.csv', 'solr-iso639-filter.csv', 'future.csv', 'groupdate.csv', 'pghero.csv', 'searchkick.csv', 'steve.csv']:
-#     within_eval(valid_proj)
-#     cross_eval(valid_proj)
+for valid_proj in ['candybar-library.csv','GI.csv', 'mtsar.csv', 'ransack.csv', 'SemanticMediaWiki.csv', 'contextlogger.csv', 'grammarviz2_src.csv', 'parallec.csv', 'SAX.csv', 'solr-iso639-filter.csv', 'future.csv', 'groupdate.csv', 'pghero.csv', 'searchkick.csv', 'steve.csv']:
+    within_eval(valid_proj)
+    cross_eval(valid_proj)
