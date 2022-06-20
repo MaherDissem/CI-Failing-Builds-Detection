@@ -370,7 +370,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import time
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -729,7 +729,7 @@ def train(X_train, y_train, X_val, y_val, df, eval_meth):
     state = generate_state(model, model.features, model.thresholds, nbr_of_conv)
     state_size = len(state)+1
     agent = Agent(state_size, threshold_vector_size, number_of_attributes, seed, HIDDEN_SIZE)
-    tb_writer = SummaryWriter("runs/") # for TensorBoard
+    # tb_writer = SummaryWriter("runs/") # for TensorBoard
     os.system('mkdir -p checkpoints results')
     #os.system('rm -f checkpoints/*')
 
