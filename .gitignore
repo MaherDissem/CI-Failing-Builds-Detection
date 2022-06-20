@@ -4,3 +4,7 @@ dataset1/
 checkpoints/
 results/
 runs/
+metrics.py
+modDT.ipynb
+rl-tests.ipynb
+Running-DL-CI-LSTM.ipynb
