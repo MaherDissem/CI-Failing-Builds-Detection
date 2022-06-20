@@ -718,6 +718,9 @@ nbr_of_conv = 2
 seed = 42
 np.random.seed(seed)
 torch.manual_seed(seed)
+# disable warnings (metrics /0)
+import warnings
+warnings.filterwarnings("ignore")
 
 def train(X_train, y_train, X_val, y_val, df, eval_meth):
 
@@ -761,7 +764,7 @@ def train(X_train, y_train, X_val, y_val, df, eval_meth):
             action = agent.act(state)
             # print(f"node={t}: {model.features[t]}<={model.thresholds[t]} => {action[0]}<={action[1]}")
             next_state, reward, done, info = env_step(model, t, action, X_train, y_train)
-            if reward<0:
+            if reward+0.1<0:
                 break
             next_state = torch.cat((torch.Tensor([t]).to(device), next_state))
             agent.step(state, action, reward, next_state, done)
