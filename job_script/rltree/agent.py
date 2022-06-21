@@ -1,6 +1,7 @@
 import random
 from collections import namedtuple, deque
 import logging
+import os
 
 import dill as pickle
 import numpy as np
@@ -12,17 +13,6 @@ import torch.optim as optim
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
-
-
-def flatten(features, thresholds):
-    # removing null values
-    clean_feat, clean_thres = [], []
-    for i in range(len(features)):
-        if features[i]!=-2:
-            clean_feat.append(features[i])
-            clean_thres.append(thresholds[i])
-    return torch.cat((torch.FloatTensor(clean_feat), torch.FloatTensor(clean_thres))).to(device)
 
 
 class ThresholdsNetwork(nn.Module):
@@ -209,6 +199,9 @@ class Agent():
         if len(self.memory) > self.memory.batch_size:
             experiences = self.memory.sample()
             self.learn(experiences, self.gamma)
+        else:
+            self.logger.debug("not enough samples to learn yet")
+
 
 
     def learn(self, experiences, gamma):

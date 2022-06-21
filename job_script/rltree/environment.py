@@ -4,21 +4,20 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 import torch
 
-from rltree.agent import flatten
 
 
-
-use_meth_1 = True
+# use_meth_1 = True
 env_logger = logging.getLogger('Environment')
-env_logger.info("using convolution method {}".format(1 if use_meth_1 else 2))
 
-def generate_state(model, features, thresholds, nbr_of_conv):
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+def generate_state(model, features, thresholds, nbr_of_conv, use_meth_1, number_of_attributes):
     """ Choose which convolution method to use"""
-    env_logger.debug("generating state")
+    env_logger.debug("generating state using convolution method {}".format(1 if use_meth_1 else 2))
     if use_meth_1:
         return generate_state_1(model, features, thresholds, nbr_of_conv=0)
     else:
-        return generate_state_2(model, nbr_of_conv)
+        return generate_state_2(model, nbr_of_conv, number_of_attributes)
 
 
 
@@ -73,6 +72,16 @@ def tree_convolution_1(model, features, thresholds, node=0):
     return new_features, new_thresholds
 
 
+def flatten(features, thresholds):
+    # removing null values
+    clean_feat, clean_thres = [], []
+    for i in range(len(features)):
+        if features[i]!=-2:
+            clean_feat.append(features[i])
+            clean_thres.append(thresholds[i])
+    return torch.cat((torch.FloatTensor(clean_feat), torch.FloatTensor(clean_thres))).to(device)
+
+
 
 def generate_state_1(model, features, thresholds, nbr_of_conv):
     features, thresholds = features.copy(), thresholds.copy()
@@ -87,7 +96,7 @@ def generate_state_1(model, features, thresholds, nbr_of_conv):
 
 
 
-def tree_convolution_2(model, encoded_nodes, node=0):
+def tree_convolution_2(model, encoded_nodes, number_of_attributes, node=0):
     """
         convolution of each 3 nodes, with overlapping => child of 1 subtree is parent of the next
         => after each conv, slit nodes' featuress and thresholdss are updated and terminal nodes are removed
@@ -118,23 +127,23 @@ def tree_convolution_2(model, encoded_nodes, node=0):
         elif encoded_nodes[left_node] is None: # left node is leaf
             vect1 = encoded_nodes[node]
             vect2 = encoded_nodes[right_node]
-            new_enc_node = node_aggregate(vect1, vect2)
+            new_enc_node = node_aggregate(number_of_attributes, vect1, vect2)
         elif encoded_nodes[right_node] is None: # right node is leaf
             vect1 = encoded_nodes[node]
             vect2 = encoded_nodes[left_node]
-            new_enc_node = node_aggregate(vect1, vect2)
+            new_enc_node = node_aggregate(number_of_attributes, vect1, vect2)
         else:
             vect1 = encoded_nodes[node]
             vect2 = encoded_nodes[left_node]
             vect3 = encoded_nodes[right_node]
-            new_enc_node = node_aggregate(vect1, vect2, vect3)
+            new_enc_node = node_aggregate(number_of_attributes, vect1, vect2, vect3)
         # save new values
         new_encoded_nodes[node] = new_enc_node
 
     return new_encoded_nodes
 
 
-def node_aggregate(vect1, vect2, vect3=None):
+def node_aggregate(number_of_attributes, vect1, vect2, vect3=None):
     """
         given 2 or 3 vectors,
         for all attributes
@@ -169,7 +178,7 @@ def node_aggregate(vect1, vect2, vect3=None):
     return out
 
 
-def encode_tree(model):
+def encode_tree(model, number_of_attributes):
     """
         Creates a vector representation to a decision tree
         each node is represented by a 1 hot vector containing the threshold at the attribute's index
@@ -194,7 +203,7 @@ def encode_tree(model):
     return encoded_nodes
 
 
-def shorten_state(encoded_nodes):
+def shorten_state(encoded_nodes, number_of_attributes):
     # finding the new state size
     n = len(encoded_nodes)
     out_size = n*number_of_attributes
@@ -216,9 +225,9 @@ def shorten_state(encoded_nodes):
     return out
 
 
-def generate_state_2(model, nbr_of_conv):
-    encoded_nodes = encode_tree(model)
+def generate_state_2(model, nbr_of_conv, number_of_attributes):
+    encoded_nodes = encode_tree(model, number_of_attributes)
     for _ in range(nbr_of_conv):
-        new_encoded_nodes = tree_convolution_2(model, encoded_nodes) # model must be fitted => add condition?
+        new_encoded_nodes = tree_convolution_2(model, encoded_nodes, number_of_attributes) # model must be fitted => add condition?
         encoded_nodes = new_encoded_nodes
-    return shorten_state(encoded_nodes)
+    return shorten_state(encoded_nodes, number_of_attributes)

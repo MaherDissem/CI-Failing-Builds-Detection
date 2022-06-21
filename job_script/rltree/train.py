@@ -1,14 +1,14 @@
-import random
+#import random
 import time
 import os
 import logging
 import csv
-from collections import deque
+#from collections import deque
 
 import numpy as np
 import pandas as pd
 import torch
-from tqdm import tqdm
+#from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 
@@ -18,7 +18,7 @@ from rltree.environment import generate_state
 
 
 class RLdecisionTreeTrain:
-    def __init__(self, hidden_size, buffer_size, batch_size, lr_actor, lr_critic, gamma, max_depth, use_method1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every):
+    def __init__(self, hidden_size, buffer_size, batch_size, lr_actor, lr_critic, gamma, epsilon, max_depth, use_method1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every):
         self.logger = logging.getLogger('Training')
         self.hidden_size = hidden_size
         self.buffer_size = buffer_size
@@ -26,6 +26,7 @@ class RLdecisionTreeTrain:
         self.lr_actor = lr_actor
         self.lr_critic = lr_critic
         self.gamma = gamma
+        self.epsilon = epsilon
         self.max_depth = max_depth
         self.use_method1 = use_method1
         self.nbr_of_conv = nbr_of_conv
@@ -45,7 +46,6 @@ class RLdecisionTreeTrain:
 
         self.logger.info("starting training with evaluation method {}".format(eval_meth))
 
-        scores_deque = deque(maxlen=100)
         #writer = SummaryWriter("runs/") # for TensorBoard
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
@@ -56,7 +56,7 @@ class RLdecisionTreeTrain:
         number_of_attributes = X_train.shape[1]
         threshold_vector_size = X_train.shape[1]
 
-        state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv)
+        state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         state_size = len(state)+1
 
         agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, self.hidden_size, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
@@ -81,18 +81,17 @@ class RLdecisionTreeTrain:
             # state init / reset => reset the DT model to initial values
             model = modDecisionTree(max_depth=self.max_depth)
             model.fit(X_train, y_train, df.columns)
-            state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv)
+            state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
             state = torch.cat((torch.Tensor([0]).to(self.device), state))
             self.prev_metric = 0
-            avg_score = 0
 
             #for t in tqdm(range(model.n_nodes)):
             for t in range(model.n_nodes):
                 if model.node_is_leaf(t):
                     continue
-                action = agent.act(state)
-            # print(f"node={t}: {model.features[t]}<{model.thresholds[t]} => {action[0]}<{action[1]}")
-                next_state, reward, done, info = self.env_step(model, t, action, X_train, y_train)
+                action = agent.act(state, eps=self.epsilon)
+                # print(f"node={t}/{model.n_nodes}: {model.features[t]}<={model.thresholds[t]} => {action[0]}<={action[1]}")
+                next_state, reward, done, info = self.env_step(model, t, action, X_train, y_train, number_of_attributes)
                 if reward+0.1<0:
                     break
                 next_state = torch.cat((torch.Tensor([t]).to(self.device), next_state))
@@ -106,13 +105,13 @@ class RLdecisionTreeTrain:
             # save checkpoint to resume training
             if i_episode % self.save_every==0:
                 agent.save_checkpoint(i_episode)
-                res = model.evaluate(X_val, y_val, False, True)
-                with open(os.path.join(self.curdir,"results",f"{eval_meth}.txt"),'w') as f:
-                    csv_writer = csv.writer(f)
-                    csv_writer.writerow([i_episode, f1score, AUC])
 
-                    
-            self.logger.info("Episode: {}, Average F1 score: {}".format(i_episode,round(avg_score,2)))
+            # save results to a csv file
+            with open(os.path.join(self.curdir,"results",f"{eval_meth}.csv"),'a') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow([i_episode, f1score, AUC])
+                                    
+            self.logger.info("Episode: {}, F1 score: {} AUC: {}".format(i_episode, f1score, AUC))
 
 
         self.logger.info("final score: {}".format(model.evaluate(X_val, y_val, False, True)))
@@ -123,7 +122,7 @@ class RLdecisionTreeTrain:
 
 
 
-    def env_step(self, model, node, action, X_train, y_train):
+    def env_step(self, model, node, action, X_train, y_train, number_of_attributes):
         """
             Environment step: updates the DT model given a node and an action
             and return the reward the new state of the tree.
@@ -131,7 +130,7 @@ class RLdecisionTreeTrain:
         # update tree
         model.set_node_feature(node, feat_index=action[0])
         model.set_node_threshold(node, value=action[1])
-        next_state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv)
+        next_state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         # calc reward
         metrics = model.evaluate(X_train, y_train)
         current_metric = metrics['F1']

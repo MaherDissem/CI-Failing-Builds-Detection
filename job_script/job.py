@@ -33,21 +33,27 @@ if __name__ == "__main__":
     #logging.disable(logging.DEBUG)
 
     logger.info("defining hyperparameters")
-    # hyper-parameters
-    HIDDEN_SIZE = 32
+    # DL hyper-parameters
+    HIDDEN_SIZE = 128
     BUFFER_SIZE = int(1e6)
     BATCH_SIZE = 256
-    # learning rates
-    LR_ACTOR = 1e-2  # change these!
+    LR_ACTOR = 1e-2   # change these!
     LR_CRITIC = 1e-2
-    GAMMA = 0.99    # reward calc
-    # size
-    max_depth = 7
-    use_meth_1 = True
-    nbr_of_conv = 2
+    # RL agent hyper-parameters
+    GAMMA = 0.99      # reward calc
+    epsilon = 0.3     # greedy-eps param
     n_episodes = 1000
     save_every = 1000
+    # DT hyper-parameters 
+    max_depth = 7
+    use_meth_1 = False
+    nbr_of_conv = 2
+    # random seed
     seed = 42
+    # disable warnings, sometimes there's a warning about metrics calculation when the classifier only predicts one class
+    import warnings
+    warnings.filterwarnings("ignore")
+
     cols_to_keep = 32
     columns = ['ci_skipped', 'ns', 'nd', 'nf', 'entropy', 'la', 'ld', 'lt', 'ndev',
            'age', 'nuc', 'exp', 'rexp', 'sexp', 'TFC', 'is_doc', 'is_build',
@@ -57,7 +63,7 @@ if __name__ == "__main__":
 
 
     # Initializing training instance
-    training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, LR_ACTOR, LR_CRITIC, GAMMA, max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
+    training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, LR_ACTOR, LR_CRITIC, GAMMA, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
 
     # Starting training
     logger.info("starting process for job {}".format(job_num))
