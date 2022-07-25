@@ -21,10 +21,6 @@ def generate_state(model, features, thresholds, nbr_of_conv, use_meth_1, number_
 
 
 
-#==================================================================================================================================#
-
-
-
 
 def tree_convolution_1(model, features, thresholds, node=0):
     """
@@ -90,9 +86,6 @@ def generate_state_1(model, features, thresholds, nbr_of_conv):
         features, thresholds = new_features, new_thresholds
     return flatten(features, thresholds)
 
-
-
-#==================================================================================================================================#
 
 
 
