@@ -59,7 +59,7 @@ class RLdecisionTreeTrain:
         state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         state_size = len(state)+1
 
-        agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, state_size/2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
+        agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, state_size//2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
 
