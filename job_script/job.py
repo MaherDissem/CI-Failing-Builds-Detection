@@ -2,6 +2,7 @@ import os
 import sys
 import logging.config
 import logging
+import random
 
 from rltree.train import RLdecisionTreeTrain
 
@@ -40,9 +41,9 @@ if __name__ == "__main__":
     LR_ACTOR = 1e-2   # change these!
     LR_CRITIC = 1e-2
     # RL agent hyper-parameters
-    GAMMA = 0.99      # reward calc
+    gamma = 0.99      # reward calc
     epsilon = 0.3     # greedy-eps param
-    n_episodes = 1000
+    n_episodes = 5
     save_every = 1000
     # DT hyper-parameters 
     max_depth = 7
@@ -61,13 +62,32 @@ if __name__ == "__main__":
            'classif', 'prev_com_res', 'proj_recent_skip', 'comm_recent_skip',
            'same_committer', 'is_fix', 'day_week', 'CM', 'commit_hash']
 
+    # random search hyper params
+    scores = dict()
+    for i in range(5): 
 
-    # Initializing training instance
-    training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, LR_ACTOR, LR_CRITIC, GAMMA, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
+        max_depth = random.choice([3,5,7,10])
+        lr = random.choice([1e0, 1e-1, 1e-2, 1e-3])
+        epsilon = random.choice([0.1, 0.2, 0.3, 0.4])
+        gamma = random.choice([1, 0.9, 0.8, 0.7, 0.5])
+        BATCH_SIZE = random.choice([32, 64, 128, 256, 512, 1024])
+        n_episodes = random.choice([100, 200, 300, 500, 700, 1000])
+        n_episodes=2
+        # Initializing training instance
+        training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, LR_ACTOR, LR_CRITIC, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
 
-    # Starting training
-    logger.info("starting process for job {}".format(job_num))
-    if eval_method=="within":
-        training.within_eval(valid_proj)
-    else:
-        training.cross_eval(valid_proj)
+        # Starting training
+        logger.info("starting process for job {}".format(job_num))
+        logger.info(f"hyperparameters choice: max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed}")
+        
+        if eval_method=="within":
+            final_eval_score = training.within_eval(valid_proj)
+            print(final_eval_score)
+            scores[final_eval_score] = f"max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed}"
+        else:
+            final_eval_score = training.cross_eval(valid_proj)
+            scores[final_eval_score] = f"max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed}"
+        print(scores)
+        
+        max_score = max([score for score in scores.keys()])
+        print(scores[max_score])

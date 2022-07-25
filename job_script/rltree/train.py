@@ -59,6 +59,7 @@ class RLdecisionTreeTrain:
         state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         state_size = len(state)+1
 
+        # manually setting hidden size
         agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, state_size//2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
@@ -109,7 +110,7 @@ class RLdecisionTreeTrain:
             # save results to a csv file
             with open(os.path.join(self.curdir,"results",f"{eval_meth}.csv"),'a') as f:
                 csv_writer = csv.writer(f)
-                csv_writer.writerow([i_episode, f1score, AUC])
+                csv_writer.writerow([i_episode, f1score, AUC, f"depth={self.max_depth}, "])
             
             # save results for Tensorboard
             #tb_writer.add_scalar("Average F1 score", f1score, i_episode)
@@ -123,6 +124,7 @@ class RLdecisionTreeTrain:
         t1 = time.time()
         self.logger.info("training took {} min!\n".format((t1-t0)/60))
 
+        return model.evaluate(X_val, y_val, False, False)['F1']
 
 
 
@@ -158,7 +160,7 @@ class RLdecisionTreeTrain:
 
         eval_meth = f'within_proj_{valid_proj}'[:-4]
 
-        self.train(X_train, y_train, X_val, y_val, df, eval_meth)
+        return self.train(X_train, y_train, X_val, y_val, df, eval_meth)
 
     
     def cross_eval(self, valid_proj):
@@ -180,5 +182,5 @@ class RLdecisionTreeTrain:
 
         eval_meth = f'cross_proj_{valid_proj}'[:-4]
 
-        self.train(X_train, y_train, X_val, y_val, df, eval_meth)
+        return self.train(X_train, y_train, X_val, y_val, df, eval_meth)
 
