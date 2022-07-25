@@ -224,16 +224,23 @@ class Agent():
             sb1 = next_state # S_{b+1}
             Xb1 = self.ThresholdsNetwork.get_thresholds_vector(sb1) # X_{b+1}
             Xb = self.ThresholdsNetwork.get_thresholds_vector(sb) # X_{b}
+
             # yb calc
+
             # get max_k(Qq)
             Qq = []
-            #??? why not simply call self.AttributeNetwork.forward(sb1, Xb1)?
-            for k in range(self.number_of_attributes):
-                # get Xe_{b+1}
-                Xeb1k = torch.zeros(len(Xb1)).to(device)
-                Xeb1k[k] = Xb1[k]
-                qek = torch.max(self.AttributeNetwork.get_attributes_vector(sb1, Xeb1k, Xe_vect=True))
-                Qq.append(qek)
+            # ??? why not simply call self.AttributeNetwork.forward(sb1, Xb1)?
+            # for k in range(self.number_of_attributes):
+            #     # get Xe_{b+1}
+            #     Xeb1k = torch.zeros(len(Xb1)).to(device)
+            #     Xeb1k[k] = Xb1[k]
+            #     qek = torch.max(self.AttributeNetwork.get_attributes_vector(sb1, Xeb1k, Xe_vect=True))
+            #     Qq.append(qek)
+
+            # we iterate and pass each Xeb1k seperately because the attribute network should calculate the Q value for a a state and a single threshold, not all possible thresholds.
+            # => testing here anyway
+            Qq = self.forward(sb1, Xb1)
+
             maxQq = torch.max(torch.Tensor(Qq))
 
             if done: # terminal node
@@ -260,7 +267,7 @@ class Agent():
 
         # compute losses as expectation over the experiences batch and update networks
 
-        self.logger.debug("updating actor")
+        self.logger.debug("updating thresholds network")
         # update thresholds network
         # Compute loss
         loss_thresholds_network = torch.mean(torch.Tensor(Q_loss))
@@ -270,7 +277,7 @@ class Agent():
         loss_thresholds_network.backward()
         self.optimizer_ThresholdsNetwork.step()
 
-        self.logger.debug("updating critic")
+        self.logger.debug("updating attribute_network")
         # update attribute network
         # Compute loss
         loss_attribute_network = torch.mean(torch.Tensor(X_loss))
@@ -282,16 +289,16 @@ class Agent():
 
     
     def load_checkpoint(self, ep):
-        # actor/thresholds Network 
-        self.logger.debug("saving actor")
-        actor_net_path = os.path.join(self.curdir, "checkpoints", f"ep{ep}-actor.pth")
+        # thresholds Network 
+        self.logger.debug("saving thresholds Network")
+        actor_net_path = os.path.join(self.curdir, "checkpoints", f"ep{ep}-thresholds-network.pth")
         checkpoint = torch.load(actor_net_path)
         self.ThresholdsNetwork.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer_ThresholdsNetwork.load_state_dict(checkpoint['optimizer_state_dict'])
 
-        # critic/attribute Network  
-        self.logger.debug("saving critic")
-        actor_net_path = os.path.join(self.curdir, "checkpoints", f"ep{ep}-critic.pth")
+        # attribute Network  
+        self.logger.debug("saving attribute Network")
+        actor_net_path = os.path.join(self.curdir, "checkpoints", f"ep{ep}-attribute-network.pth")
         checkpoint = torch.load(actor_net_path)
         self.AttributeNetwork.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer_AttributeNetwork.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -303,19 +310,19 @@ class Agent():
     
 
     def save_checkpoint(self, ep):
-        # actor/thresholds Network 
-        self.logger.debug("loading actor")
+        # thresholds Network 
+        self.logger.debug("loading thresholds Network")
         torch.save({
             'model_state_dict': self.ThresholdsNetwork.state_dict(),
             'optimizer_state_dict': self.optimizer_ThresholdsNetwork.state_dict(),
-            }, os.path.join(self.curdir, "checkpoints", f"ep{ep}-actor.pth"))
+            }, os.path.join(self.curdir, "checkpoints", f"ep{ep}-thresholds-Network.pth"))
         
-        # critic/attribute Network  
-        self.logger.debug("loading critic")
+        # attribute Network  
+        self.logger.debug("loading attribute Network")
         torch.save({
             'model_state_dict': self.AttributeNetwork.state_dict(),
             'optimizer_state_dict': self.optimizer_AttributeNetwork.state_dict(),
-            }, os.path.join(self.curdir, "checkpoints", f"ep{ep}-critic.pth"))
+            }, os.path.join(self.curdir, "checkpoints", f"ep{ep}-attribute-Network.pth"))
 
         # Replay memory
         self.logger.debug("loading memory")
