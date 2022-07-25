@@ -239,8 +239,7 @@ class Agent():
 
             # we iterate and pass each Xeb1k seperately because the attribute network should calculate the Q value for a a state and a single threshold, not all possible thresholds.
             # => testing here anyway
-            Qq = self.AttributeNetwork
-            .forward(sb1, Xb1)
+            Qq = self.AttributeNetwork.forward(sb1, Xb1)
 
             maxQq = torch.max(torch.Tensor(Qq))
 
