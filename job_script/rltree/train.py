@@ -59,7 +59,7 @@ class RLdecisionTreeTrain:
         state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         state_size = len(state)+1
 
-        agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, self.hidden_size, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
+        agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, self.state_size/2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
 
@@ -110,7 +110,11 @@ class RLdecisionTreeTrain:
             with open(os.path.join(self.curdir,"results",f"{eval_meth}.csv"),'a') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerow([i_episode, f1score, AUC])
-                                    
+            
+            # save results for Tensorboard
+            #tb_writer.add_scalar("Average F1 score", f1score, i_episode)
+
+            # display classification metrics
             self.logger.info("Episode: {}, F1 score: {} AUC: {}".format(i_episode, f1score, AUC))
 
 
