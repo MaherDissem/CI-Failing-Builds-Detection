@@ -290,42 +290,42 @@ class Agent():
     
     def load_checkpoint(self, ep):
         # thresholds Network 
-        self.logger.debug("saving thresholds Network")
+        self.logger.debug("loading thresholds Network")
         actor_net_path = os.path.join(self.curdir, "checkpoints", f"ep{ep}-thresholds-network.pth")
         checkpoint = torch.load(actor_net_path)
         self.ThresholdsNetwork.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer_ThresholdsNetwork.load_state_dict(checkpoint['optimizer_state_dict'])
 
         # attribute Network  
-        self.logger.debug("saving attribute Network")
+        self.logger.debug("loading attribute Network")
         actor_net_path = os.path.join(self.curdir, "checkpoints", f"ep{ep}-attribute-network.pth")
         checkpoint = torch.load(actor_net_path)
         self.AttributeNetwork.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer_AttributeNetwork.load_state_dict(checkpoint['optimizer_state_dict'])
         
         # Replay memory
-        self.logger.debug("saving memory")
+        self.logger.debug("loading memory")
         with open(os.path.join(self.curdir, "checkpoints", f"ep{ep}-memory.pkl"),'rb') as f:
             self.memory.memory = pickle.load(f)
     
 
     def save_checkpoint(self, ep):
         # thresholds Network 
-        self.logger.debug("loading thresholds Network")
+        self.logger.debug("saving thresholds Network")
         torch.save({
             'model_state_dict': self.ThresholdsNetwork.state_dict(),
             'optimizer_state_dict': self.optimizer_ThresholdsNetwork.state_dict(),
             }, os.path.join(self.curdir, "checkpoints", f"ep{ep}-thresholds-Network.pth"))
         
         # attribute Network  
-        self.logger.debug("loading attribute Network")
+        self.logger.debug("saving attribute Network")
         torch.save({
             'model_state_dict': self.AttributeNetwork.state_dict(),
             'optimizer_state_dict': self.optimizer_AttributeNetwork.state_dict(),
             }, os.path.join(self.curdir, "checkpoints", f"ep{ep}-attribute-Network.pth"))
 
         # Replay memory
-        self.logger.debug("loading memory")
+        self.logger.debug("saving memory")
         with open(os.path.join(self.curdir, "checkpoints", f"ep{ep}-memory.pkl"),'wb') as f:
             pickle.dump(self.memory.memory, f)
 
