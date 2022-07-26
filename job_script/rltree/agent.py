@@ -157,12 +157,12 @@ class Agent():
         self.logger.info("using {}".format(str(device)))
 
         # Thresholds Network 
-        self.logger.debug("creating ThresholdsNetwork")
+        self.logger.debug("creating Thresholds network")
         self.ThresholdsNetwork = ThresholdsNetwork(state_size, threshold_vector_size, random_seed, hidden_size).to(device)
         self.optimizer_ThresholdsNetwork = optim.Adam(self.ThresholdsNetwork.parameters(), lr=lr_actor)     
         
         # Attribute Network  
-        self.logger.debug("creating AttributeNetwork")
+        self.logger.debug("creating Attribute network")
         self.AttributeNetwork = AttributeNetwork(state_size, threshold_vector_size, number_of_attributes, random_seed, hidden_size).to(device)
         self.optimizer_AttributeNetwork = optim.Adam(self.AttributeNetwork.parameters(), lr=lr_critic, weight_decay=0)
 
@@ -227,8 +227,8 @@ class Agent():
 
             # yb calc
 
-            # get max_k(Qq)
-            Qq = []
+            # # get max_k(Qq)
+            # Qq = []
             # ??? why not simply call self.AttributeNetwork.forward(sb1, Xb1)?
             # for k in range(self.number_of_attributes):
             #     # get Xe_{b+1}
@@ -236,12 +236,12 @@ class Agent():
             #     Xeb1k[k] = Xb1[k]
             #     qek = torch.max(self.AttributeNetwork.get_attributes_vector(sb1, Xeb1k, Xe_vect=True))
             #     Qq.append(qek)
+            # maxQq = torch.max(torch.Tensor(Qq))
 
             # we iterate and pass each Xeb1k seperately because the attribute network should calculate the Q value for a a state and a single threshold, not all possible thresholds.
             # => testing here anyway
-            Qq = self.AttributeNetwork.forward(sb1, Xb1)
+            maxQq = self.AttributeNetwork.forward(sb1, Xb1)
 
-            maxQq = torch.max(torch.Tensor(Qq))
 
             if done: # terminal node
                 yb = rb

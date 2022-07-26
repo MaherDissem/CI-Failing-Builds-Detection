@@ -18,6 +18,8 @@ from rltree.environment import generate_state
 
 
 class RLdecisionTreeTrain:
+
+
     def __init__(self, hidden_size, buffer_size, batch_size, lr_actor, lr_critic, gamma, epsilon, max_depth, use_method1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every):
         self.logger = logging.getLogger('Training')
         self.hidden_size = hidden_size
@@ -40,6 +42,7 @@ class RLdecisionTreeTrain:
         self.save_every = save_every
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
+
     def train(self, X_train, y_train, X_val, y_val, df, eval_meth):
 
         t0 = time.time()
@@ -59,7 +62,7 @@ class RLdecisionTreeTrain:
         state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         state_size = len(state)+1
 
-        # manually setting hidden size
+        # manually setting hidden size = state_size//2
         agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, state_size//2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
