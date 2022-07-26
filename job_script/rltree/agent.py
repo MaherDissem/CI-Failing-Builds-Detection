@@ -153,16 +153,16 @@ class Agent():
         self.seed = random.seed(random_seed)
         self.gamma = gamma
         self.curdir = curdir
-        self.logger.info("using {}".format(str(device)))
         #print("Using: ", device)
+        self.logger.info("using {}".format(str(device)))
 
-        # actor Network 
-        self.logger.debug("creating actor")
+        # Thresholds Network 
+        self.logger.debug("creating ThresholdsNetwork")
         self.ThresholdsNetwork = ThresholdsNetwork(state_size, threshold_vector_size, random_seed, hidden_size).to(device)
         self.optimizer_ThresholdsNetwork = optim.Adam(self.ThresholdsNetwork.parameters(), lr=lr_actor)     
         
-        # critic Network  
-        self.logger.debug("creating critic")
+        # Attribute Network  
+        self.logger.debug("creating AttributeNetwork")
         self.AttributeNetwork = AttributeNetwork(state_size, threshold_vector_size, number_of_attributes, random_seed, hidden_size).to(device)
         self.optimizer_AttributeNetwork = optim.Adam(self.AttributeNetwork.parameters(), lr=lr_critic, weight_decay=0)
 
