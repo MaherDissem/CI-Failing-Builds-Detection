@@ -26,15 +26,15 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(curdir,"logging",str(job_id))):
         os.mkdir(os.path.join(curdir,"logging",str(job_id)))
 
-    # logging.config.fileConfig(
-    #     os.path.join(curdir,"logging",'logging.conf'),
-    #     defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), f"logs_{eval_method}_{valid_proj[:-4]}.log")}
-    # )
-
     logging.config.fileConfig(
         os.path.join(curdir,"logging",'logging.conf'),
-        defaults={"logfilename":os.path.join(curdir, "logging", f"logs_{eval_method}_{valid_proj[:-4]}.log")}
+        defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), f"logs_{eval_method}_{valid_proj[:-4]}.log")}
     )
+
+    # logging.config.fileConfig(
+    #     os.path.join(curdir,"logging",'logging.conf'),
+    #     defaults={"logfilename":os.path.join(curdir, "logging", f"logs_{eval_method}_{valid_proj[:-4]}.log")}
+    # )
 
     logger = logging.getLogger('Main')
     
