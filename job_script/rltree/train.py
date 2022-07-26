@@ -119,10 +119,10 @@ class RLdecisionTreeTrain:
             self.logger.info("Episode: {}, F1 score: {} AUC: {}".format(i_episode, f1score, AUC))
 
 
-        self.logger.info("final score: {}".format(model.evaluate(X_val, y_val, False, True)))
+        self.logger.info("final score: {}".format(model.evaluate(X_val, y_val, False, False)))
 
         t1 = time.time()
-        self.logger.info("training took {} min!\n".format((t1-t0)/60))
+        self.logger.info("training took {} min".format((t1-t0)/60))
 
         return model.evaluate(X_val, y_val, False, False)['F1']
 
