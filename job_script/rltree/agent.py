@@ -235,13 +235,13 @@ class Agent():
             #     Xeb1k = torch.zeros(len(Xb1)).to(device)
             #     Xeb1k[k] = Xb1[k]
             #     qek = torch.max(self.AttributeNetwork.get_attributes_vector(sb1, Xeb1k, Xe_vect=True))
-            #     Qq.append(qek)
-            # maxQq = torch.max(torch.Tensor(Qq))
+            #     Qq.append(qek[k])
 
             # we iterate and pass each Xeb1k seperately because the attribute network should calculate the Q value for a a state and a single threshold, not all possible thresholds.
             # => testing here anyway
-            maxQq = self.AttributeNetwork.forward(sb1, Xb1)
+            Qq = self.AttributeNetwork.forward(sb1, Xb1)
 
+            maxQq = torch.max(torch.Tensor(Qq))
 
             if done: # terminal node
                 yb = rb
@@ -253,6 +253,7 @@ class Agent():
             # Q loss
             xebk = torch.zeros(len(Xb)).to(device)
             xebk[k_act] = Xb[k_act]
+            Q_loss.append(yb-self.AttributeNetwork.get_attributes_vector(sb, xebk, Xe_vect=True)[k_act])
             Q_loss.append(yb-self.AttributeNetwork.get_attributes_vector(sb, xebk, Xe_vect=True)[k_act])
             
             # X loss
