@@ -55,7 +55,7 @@ if __name__ == "__main__":
     save_every = 1000
     # DT hyper-parameters 
     max_depth = 7
-    use_meth_1 = False
+    use_meth_1 = True
     nbr_of_conv = 2
     # random seed
     seed = 42
