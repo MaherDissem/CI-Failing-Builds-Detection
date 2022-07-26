@@ -254,7 +254,6 @@ class Agent():
             xebk = torch.zeros(len(Xb)).to(device)
             xebk[k_act] = Xb[k_act]
             Q_loss.append(yb-self.AttributeNetwork.get_attributes_vector(sb, xebk, Xe_vect=True)[k_act])
-            Q_loss.append(yb-self.AttributeNetwork.get_attributes_vector(sb, xebk, Xe_vect=True)[k_act])
             
             # X loss
             sum_Qq = 0
