@@ -43,7 +43,7 @@ class ThresholdsNetwork(nn.Module):
     
 
     def get_thresholds_vector(self, state):
-        threshold_vector = self.forward(state).to(device)
+        threshold_vector = self.forward(state)#.to(device)
         return threshold_vector
     
     
@@ -62,7 +62,7 @@ class AttributeNetwork(nn.Module):
         """
         super(AttributeNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
-        self.fc1 = nn.Linear(state_size+threshold_vector_size, hidden_size)
+        self.fc1 = nn.Linear(state_size + threshold_vector_size, hidden_size)
         #self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, number_of_attributes)
 
@@ -82,10 +82,10 @@ class AttributeNetwork(nn.Module):
 
         else:
             # decompose (st,X) input into (st,Xe_k) for each k 
-            attributes_vector = torch.zeros(len(threshold_vector)).to(device)
+            attributes_vector = torch.zeros(len(threshold_vector), device=device)
             X = threshold_vector
             for k in range(len(X)):
-                Xe = torch.zeros(len(X)).to(device)    
+                Xe = torch.zeros(len(X), device=device)    
                 Xe[k] = X[k]
                 q_vect = self.forward(state,Xe)
                 attributes_vector[k] = q_vect[k]
@@ -119,11 +119,11 @@ class ReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
-        states = torch.vstack([e.state for e in experiences if e is not None]).float().to(device)
-        actions = torch.vstack([torch.tensor(e.action) for e in experiences if e is not None]).float().to(device)
-        rewards = torch.vstack([torch.tensor(e.reward) for e in experiences if e is not None]).float().to(device)
-        next_states = torch.vstack([e.next_state for e in experiences if e is not None]).float().to(device)
-        dones = torch.vstack([torch.tensor(e.done) for e in experiences if e is not None]).float().to(device)
+        states = torch.vstack([e.state for e in experiences if e is not None]).float()#.to(device)
+        actions = torch.vstack([torch.tensor(e.action) for e in experiences if e is not None]).float()#.to(device)
+        rewards = torch.vstack([torch.tensor(e.reward) for e in experiences if e is not None]).float()#.to(device)
+        next_states = torch.vstack([e.next_state for e in experiences if e is not None]).float()#.to(device)
+        dones = torch.vstack([torch.tensor(e.done) for e in experiences if e is not None]).float()#.to(device)
         return zip(states, actions, rewards, next_states, dones)
 
 
@@ -158,13 +158,13 @@ class Agent():
 
         # Thresholds Network 
         self.logger.debug("creating Thresholds network")
-        self.ThresholdsNetwork = ThresholdsNetwork(state_size, threshold_vector_size, random_seed, hidden_size).to(device)
+        self.ThresholdsNetwork = ThresholdsNetwork(state_size, threshold_vector_size, random_seed, hidden_size)#.to(device)
         self.optimizer_ThresholdsNetwork = optim.Adam(self.ThresholdsNetwork.parameters(), lr=lr_actor)     
         
         # Attribute Network  
         self.logger.debug("creating Attribute network")
-        self.AttributeNetwork = AttributeNetwork(state_size, threshold_vector_size, number_of_attributes, random_seed, hidden_size).to(device)
-        self.optimizer_AttributeNetwork = optim.Adam(self.AttributeNetwork.parameters(), lr=lr_critic, weight_decay=0)
+        self.AttributeNetwork = AttributeNetwork(state_size, threshold_vector_size, number_of_attributes, random_seed, hidden_size)#.to(device)
+        self.optimizer_AttributeNetwork = optim.Adam(self.AttributeNetwork.parameters(), lr=lr_critic)#, weight_decay=0)
 
         # Replay memory
         self.logger.debug("creating replay buffer")
@@ -215,8 +215,12 @@ class Agent():
             gamma (float): discount factor
         """
         self.logger.debug("calculating loss values")
-        Q_loss, X_loss = [], []
-        for experience in experiences: # for b in B
+
+        # Q_loss, X_loss = [], []
+        Q_loss = torch.zeros(self.memory.batch_size, device=device)
+        X_loss = torch.zeros(self.memory.batch_size, device=device)
+    
+        for iter, experience in enumerate(experiences): # for b in B
             state, action, reward, next_state, done = experience
             sb = state
             k_act = int(action[0].item())
@@ -251,26 +255,29 @@ class Agent():
             # compute losses for single transitions
 
             # Q loss
-            xebk = torch.zeros(len(Xb)).to(device)
+            xebk = torch.zeros(len(Xb), device=device)
             xebk[k_act] = Xb[k_act]
-            Q_loss.append(yb-self.AttributeNetwork.get_attributes_vector(sb, xebk, Xe_vect=True)[k_act])
+            Q_loss[iter] = yb - self.AttributeNetwork.get_attributes_vector(sb, xebk, Xe_vect=True)[k_act]
             
-            # X loss
-            sum_Qq = 0
-            for k in range(self.number_of_attributes):
-                Xebk = torch.zeros(len(Xb)).to(device)
-                Xebk[k] = Xb[k] 
-                # Xe_{b,k}
-                qek = self.AttributeNetwork.get_attributes_vector(sb1, Xebk, Xe_vect=True)
-                sum_Qq += qek[k]
-            X_loss.append(-sum_Qq)
+            # # X loss
+            # sum_Qq = 0
+            # for k in range(self.number_of_attributes):
+            #     Xebk = torch.zeros(len(Xb)).to(device)
+            #     Xebk[k] = Xb[k] 
+            #     # Xe_{b,k}
+            #     qek = self.AttributeNetwork.get_attributes_vector(sb1, Xebk, Xe_vect=True)
+            #     sum_Qq += qek[k]            
+            # X_loss.append(-sum_Qq)
+
+            qek = self.AttributeNetwork.get_attributes_vector(sb1, Xb, Xe_vect=False)
+            X_loss[iter] = qek.sum()
 
         # compute losses as expectation over the experiences batch and update networks
 
         self.logger.debug("updating thresholds network")
         # update thresholds network
         # Compute loss
-        loss_thresholds_network = torch.mean(torch.Tensor(Q_loss))
+        loss_thresholds_network = X_loss.mean()
         loss_thresholds_network.requires_grad_()
         # Minimize the loss
         self.optimizer_ThresholdsNetwork.zero_grad()
@@ -280,7 +287,7 @@ class Agent():
         self.logger.debug("updating attribute_network")
         # update attribute network
         # Compute loss
-        loss_attribute_network = torch.mean(torch.Tensor(X_loss))
+        loss_attribute_network = Q_loss.mean().detach()
         loss_attribute_network.requires_grad_()
         # Minimize the loss
         self.optimizer_AttributeNetwork.zero_grad()
