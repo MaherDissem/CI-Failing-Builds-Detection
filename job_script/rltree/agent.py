@@ -77,10 +77,10 @@ class AttributeNetwork(nn.Module):
 
     def get_attributes_vector(self, state, threshold_vector, Xe_vect=False):
         if not Xe_vect:
-            # the input threshold vector is Xe instead of X; for the calc of target yb
             attributes_vector = self.forward(state, threshold_vector)
 
         else:
+            # the input threshold vector is Xe instead of X
             # decompose (st,X) input into (st,Xe_k) for each k 
             attributes_vector = torch.zeros(len(threshold_vector), device=device)
             X = threshold_vector
