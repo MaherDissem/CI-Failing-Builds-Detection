@@ -86,7 +86,7 @@ class RLdecisionTreeTrain:
             model = modDecisionTree(max_depth=self.max_depth)
             model.fit(X_train, y_train, df.columns)
             state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
-            state = torch.cat((torch.Tensor([0], device=self.device), state))
+            state = torch.cat((torch.Tensor([0]).to(self.device), state))
             self.prev_metric = 0
 
             #for t in tqdm(range(model.n_nodes)):
@@ -98,7 +98,7 @@ class RLdecisionTreeTrain:
                 next_state, reward, done, info = self.env_step(model, t, action, X_train, y_train, number_of_attributes)
                 if reward+0.1<0:
                     break
-                next_state = torch.cat((torch.Tensor([t], device=self.device), next_state))
+                next_state = torch.cat((torch.Tensor([t]).to(self.device), next_state))
                 agent.step(state, action, reward, next_state, done)
                 state = next_state
                 res = model.evaluate(X_val, y_val, False, False)
