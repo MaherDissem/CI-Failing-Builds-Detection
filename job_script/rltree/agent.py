@@ -29,14 +29,16 @@ class ThresholdsNetwork(nn.Module):
             hidden_size (int): Number of nodes in the hidden layer
         """
         super(ThresholdsNetwork, self).__init__()
-        self.seed = torch.manual_seed(seed)     
+        self.seed = torch.manual_seed(seed)
+        self.layer_norm = nn.LayerNorm(state_size)
         self.fc1 = nn.Linear(state_size, hidden_size)
         #self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, threshold_vector_size)
 
 
     def forward(self, state):
-        x = F.relu(self.fc1(state), inplace=True)
+        x = self.layer_norm(state)
+        x = F.relu(self.fc1(x), inplace=True)
         #x = F.relu(self.fc2(x), inplace=True)
         out = F.relu(self.fc3(x))
         return out
@@ -62,6 +64,7 @@ class AttributeNetwork(nn.Module):
         """
         super(AttributeNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
+        self.layer_norm = nn.LayerNorm(state_size + threshold_vector_size)
         self.fc1 = nn.Linear(state_size + threshold_vector_size, hidden_size)
         #self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, number_of_attributes)
@@ -70,6 +73,7 @@ class AttributeNetwork(nn.Module):
     def forward(self, state, threshold_vector):
         """Build a critic (attribute) network that maps (state, threshold_vector) pairs -> Q-values for each attribute."""
         x = torch.cat((state, threshold_vector), dim=-1)
+        x = self.layer_norm(x)
         x = F.relu(self.fc1(x))
         #x = F.relu(self.fc2(x))
         return F.relu(self.fc3(x))
