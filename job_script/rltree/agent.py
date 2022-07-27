@@ -119,11 +119,11 @@ class ReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
-        states = torch.vstack([e.state for e in experiences if e is not None]).float()#.to(device)
-        actions = torch.vstack([torch.tensor(e.action) for e in experiences if e is not None]).float()#.to(device)
-        rewards = torch.vstack([torch.tensor(e.reward) for e in experiences if e is not None]).float()#.to(device)
-        next_states = torch.vstack([e.next_state for e in experiences if e is not None]).float()#.to(device)
-        dones = torch.vstack([torch.tensor(e.done) for e in experiences if e is not None]).float()#.to(device)
+        states = torch.vstack([e.state for e in experiences if e is not None])
+        actions = torch.vstack([torch.tensor(e.action, device=device) for e in experiences if e is not None])
+        rewards = torch.vstack([torch.tensor(e.reward, device=device) for e in experiences if e is not None])
+        next_states = torch.vstack([e.next_state for e in experiences if e is not None])
+        dones = torch.vstack([torch.tensor(e.done, device=device) for e in experiences if e is not None])
         return zip(states, actions, rewards, next_states, dones)
 
 
