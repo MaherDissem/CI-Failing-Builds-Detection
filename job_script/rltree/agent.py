@@ -76,7 +76,7 @@ class AttributeNetwork(nn.Module):
 
 
     def get_attributes_vector(self, state, threshold_vector, Xe_vect=False):
-        if Xe_vect:
+        if not Xe_vect:
             # the input threshold vector is Xe instead of X; for the calc of target yb
             attributes_vector = self.forward(state, threshold_vector)
 
@@ -158,12 +158,12 @@ class Agent():
 
         # Thresholds Network 
         self.logger.debug("creating Thresholds network")
-        self.ThresholdsNetwork = ThresholdsNetwork(state_size, threshold_vector_size, random_seed, hidden_size)#.to(device)
+        self.ThresholdsNetwork = ThresholdsNetwork(state_size, threshold_vector_size, random_seed, hidden_size).to(device)
         self.optimizer_ThresholdsNetwork = optim.Adam(self.ThresholdsNetwork.parameters(), lr=lr_actor)     
         
         # Attribute Network  
         self.logger.debug("creating Attribute network")
-        self.AttributeNetwork = AttributeNetwork(state_size, threshold_vector_size, number_of_attributes, random_seed, hidden_size)#.to(device)
+        self.AttributeNetwork = AttributeNetwork(state_size, threshold_vector_size, number_of_attributes, random_seed, hidden_size).to(device)
         self.optimizer_AttributeNetwork = optim.Adam(self.AttributeNetwork.parameters(), lr=lr_critic)#, weight_decay=0)
 
         # Replay memory
