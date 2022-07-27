@@ -240,12 +240,12 @@ class Agent():
             #     Xeb1k[k] = Xb1[k]
             #     qek = torch.max(self.AttributeNetwork.get_attributes_vector(sb1, Xeb1k, Xe_vect=True))
             #     Qq.append(qek[k])
+            # maxQq = torch.max(torch.Tensor(Qq))
 
             # we iterate and pass each Xeb1k seperately because the attribute network should calculate the Q value for a a state and a single threshold, not all possible thresholds.
             # => testing here anyway
             Qq = self.AttributeNetwork.forward(sb1, Xb1)
-
-            maxQq = torch.max(torch.Tensor(Qq))
+            maxQq = torch.max(Qq)
 
             if done: # terminal node
                 yb = rb
