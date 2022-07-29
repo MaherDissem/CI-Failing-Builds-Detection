@@ -4,5 +4,6 @@
 #SBATCH --gres=gpu:1 # GPUs per node
 #SBATCH --mem=8000M # memory per node
 #SBATCH --array=0-14
+mkdir -p slurm_output
 #SBATCH --output=./slurm_output/slurm-%A_%a.out
 python ./job.py cross $SLURM_ARRAY_TASK_ID $SLURM_ARRAY_JOB_ID
