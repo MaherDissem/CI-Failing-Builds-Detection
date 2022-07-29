@@ -87,7 +87,7 @@ if __name__ == "__main__":
             n_episodes = random.choice([200, 300, 500, 700, 1000])
 
             # Initializing training instance
-            training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, LR_ACTOR, LR_CRITIC, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
+            training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, lr, lr, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
 
             # Starting training
             logger.info("starting process for job {}".format(job_num))
