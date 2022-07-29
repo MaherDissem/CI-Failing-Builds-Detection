@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # Setting up logging
     curdir = os.curdir
     if not os.path.exists(os.path.join(curdir, "logging", str(job_id), str(threading.current_thread().ident))):
-        os.mkdir(os.path.join(curdir, "logging", str(job_id), str(threading.current_thread().ident)))
+        os.makedirs(os.path.join(curdir, "logging", str(job_id), str(threading.current_thread().ident)))
 
     logging.config.fileConfig(
         os.path.join(curdir,"logging",'logging.conf'),
