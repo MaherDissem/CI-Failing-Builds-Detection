@@ -15,8 +15,8 @@ from rltree.decisionTree import modDecisionTree
 from rltree.agent import Agent
 from rltree.environment import generate_state
 
+import threading
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
 class RLdecisionTreeTrain:
 
@@ -41,7 +41,7 @@ class RLdecisionTreeTrain:
         self.columns = columns
         self.cols_to_keep = cols_to_keep
         self.save_every = save_every
-        
+    
 
     def train(self, X_train, y_train, X_val, y_val, df, eval_meth):
 
@@ -66,6 +66,11 @@ class RLdecisionTreeTrain:
         agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, state_size//2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
+
+        with open(os.path.join(self.curdir,"results",f"{eval_meth}-{threading.current_thread().ident}.csv"),'a') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([eval_meth])
+            csv_writer.writerow([f"max_depth={self.max_depth} lr={self.lr_actor} epsilon={self.epsilon} gamma={self.gamma} batch_size={self.batch_size} n_episodes={self.n_episodes} seed={self.seed}"])
 
         for p in [os.path.join(self.curdir, "checkpoints"), os.path.join(self.curdir, "results")]:
             if not os.path.exists(p):
@@ -103,7 +108,7 @@ class RLdecisionTreeTrain:
                 state = next_state
                 res = model.evaluate(X_val, y_val, False, False)
                 f1score, AUC = res['F1'], res['AUC']
-                if done:
+                if done: 
                     break
 
             # save checkpoint to resume training
@@ -111,9 +116,9 @@ class RLdecisionTreeTrain:
                 agent.save_checkpoint(i_episode)
 
             # save results to a csv file
-            with open(os.path.join(self.curdir,"results",f"{eval_meth}.csv"),'a') as f:
+            with open(os.path.join(self.curdir,"results",f"{eval_meth}-{threading.current_thread().ident}.csv"),'a') as f:
                 csv_writer = csv.writer(f)
-                csv_writer.writerow([i_episode, f1score, AUC ])
+                csv_writer.writerow([i_episode, f1score, AUC])
             
             # save results for Tensorboard
             #tb_writer.add_scalar("Average F1 score", f1score, i_episode)
