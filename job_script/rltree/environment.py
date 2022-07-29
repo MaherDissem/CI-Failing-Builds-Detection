@@ -77,7 +77,7 @@ def flatten(features, thresholds):
     #         clean_thres.append(thresholds[i])
     # return torch.cat((torch.FloatTensor(clean_feat), torch.FloatTensor(clean_thres))).to(device)
 
-    return torch.cat((torch.FloatTensor(features!=-2, device=device), torch.FloatTensor(thresholds!=-2, device=device)))
+    return torch.cat((torch.tensor(features!=-2, device=device), torch.tensor(thresholds!=-2,device=device)))
 
 
 
