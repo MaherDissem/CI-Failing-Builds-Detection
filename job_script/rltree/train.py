@@ -67,16 +67,17 @@ class RLdecisionTreeTrain:
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
 
-        with open(os.path.join(self.curdir,"results",f"{eval_meth}-{threading.current_thread().ident}.csv"),'a') as f:
-            csv_writer = csv.writer(f)
-            csv_writer.writerow([eval_meth])
-            csv_writer.writerow([f"max_depth={self.max_depth} lr={self.lr_actor} epsilon={self.epsilon} gamma={self.gamma} batch_size={self.batch_size} n_episodes={self.n_episodes} seed={self.seed}"])
-
         for p in [os.path.join(self.curdir, "checkpoints"), os.path.join(self.curdir, "results")]:
             if not os.path.exists(p):
                 os.mkdir(p)
         #os.system('mkdir -p checkpoints results')
         #os.system('rm -f checkpoints/*')
+
+        with open(os.path.join(self.curdir,"results",f"{eval_meth}-{threading.current_thread().ident}.csv"),'a') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([eval_meth])
+            csv_writer.writerow([f"max_depth={self.max_depth} lr={self.lr_actor} epsilon={self.epsilon} gamma={self.gamma} batch_size={self.batch_size} n_episodes={self.n_episodes} seed={self.seed}"])
+
         start_ep = 1 # do not change
 
         # load checkpoint (comment/uncomment)
