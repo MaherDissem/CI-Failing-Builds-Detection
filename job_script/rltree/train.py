@@ -15,7 +15,6 @@ from rltree.decisionTree import modDecisionTree
 from rltree.agent import Agent
 from rltree.environment import generate_state
 
-import threading
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class RLdecisionTreeTrain:
@@ -73,7 +72,7 @@ class RLdecisionTreeTrain:
         #os.system('mkdir -p checkpoints results')
         #os.system('rm -f checkpoints/*')
 
-        with open(os.path.join(self.curdir,"results",f"{eval_meth}-{threading.current_thread().ident}.csv"),'a') as f:
+        with open(os.path.join(self.curdir,"results",f"{eval_meth}-{os.getpid()}.csv"),'a') as f:
             csv_writer = csv.writer(f)
             csv_writer.writerow([eval_meth])
             csv_writer.writerow([f"max_depth={self.max_depth} lr={self.lr_actor} epsilon={self.epsilon} gamma={self.gamma} batch_size={self.batch_size} n_episodes={self.n_episodes} seed={self.seed}"])
@@ -117,7 +116,7 @@ class RLdecisionTreeTrain:
                 agent.save_checkpoint(i_episode)
 
             # save results to a csv file
-            with open(os.path.join(self.curdir,"results",f"{eval_meth}-{threading.current_thread().ident}.csv"),'a') as f:
+            with open(os.path.join(self.curdir,"results",f"{eval_meth}-{os.getpid()}.csv"),'a') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerow([i_episode, f1score, AUC])
             
