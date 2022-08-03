@@ -18,8 +18,8 @@ def hyper_param_opt(eval_method, valid_proj, job_num, job_id, nbr_tries, scores)
 
     logging.config.fileConfig(
         os.path.join(curdir,"logging",'logging.conf'),
-        # defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), str(os.getpid()), f"logs_{eval_method}_{valid_proj[:-4]}.log")}
-        defaults={"logfilename":os.path.join(curdir,"logging",f"logs_{eval_method}_{valid_proj[:-4]}.log")}
+        defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), str(os.getpid()), f"logs_{eval_method}_{valid_proj[:-4]}.log")}
+        # defaults={"logfilename":os.path.join(curdir,"logging",f"logs_{eval_method}_{valid_proj[:-4]}.log")}
     )
     logger = logging.getLogger('Main')
     # Uncomment to disable debug level logging
@@ -56,18 +56,16 @@ def hyper_param_opt(eval_method, valid_proj, job_num, job_id, nbr_tries, scores)
 
 
     # random search hyper params tuning
-    
+
     for _ in range(nbr_tries): 
 
         # Possible hyper-params
         max_depth = random.choice([3,5,7,10,12])
-        max_depth=3
         lr = random.choice([1e0, 1e-1, 1e-2, 1e-3])
         epsilon = random.choice([0.1, 0.2, 0.3, 0.4])
         gamma = random.choice([1, 0.9, 0.8, 0.7, 0.5])
         BATCH_SIZE = random.choice([32, 64, 128, 256, 512, 1024])
-        n_episodes = random.choice([200, 300, 500, 700, 1000])
-        n_episodes=3
+        n_episodes = random.choice([200, 400, 600, 800,])
 
         # Initializing training instance
         training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, lr, lr, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
@@ -120,7 +118,7 @@ if __name__ == "__main__":
 
     logging.config.fileConfig(
         os.path.join(curdir,"logging",'logging.conf'),
-        # defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), f"logs_{eval_method}_{valid_proj[:-4]}.log")}
+        # defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), f"Hyper_param_logs_{eval_method}_{valid_proj[:-4]}.log")}
         defaults={"logfilename":os.path.join(curdir, "logging", f"Hyper_param_logs_{eval_method}_{valid_proj[:-4]}.log")}
     )
 
