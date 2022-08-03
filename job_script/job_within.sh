@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=48:0:00
+#SBATCH --time=168:0:00
 #SBATCH --nodes=1 # number of nodes
 #SBATCH --gres=gpu:1 # GPUs per node
 #SBATCH --mem=8000M # memory per node
