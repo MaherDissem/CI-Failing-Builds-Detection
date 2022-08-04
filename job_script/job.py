@@ -66,8 +66,6 @@ def hyper_param_opt(eval_method, valid_proj, job_num, job_id, nbr_tries, scores)
         gamma = random.choice([1, 0.9, 0.8, 0.7, 0.5])
         BATCH_SIZE = random.choice([32, 64, 128, 256, 512, 1024])
         n_episodes = random.choice([200, 400, 600, 800,])
-        n_episodes=3
-        max_depth=3
         # Initializing training instance
         training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, lr, lr, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
 
