@@ -5,7 +5,7 @@ import logging
 import random
 
 from rltree.train import RLdecisionTreeTrain
-from multiprocess import Process, Manager 
+from torch.multiprocessing import Process, Manager, set_start_method
 
 
 
@@ -66,7 +66,8 @@ def hyper_param_opt(eval_method, valid_proj, job_num, job_id, nbr_tries, scores)
         gamma = random.choice([1, 0.9, 0.8, 0.7, 0.5])
         BATCH_SIZE = random.choice([32, 64, 128, 256, 512, 1024])
         n_episodes = random.choice([200, 400, 600, 800,])
-
+        n_episodes=3
+        max_depth=3
         # Initializing training instance
         training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, lr, lr, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
 
@@ -101,6 +102,7 @@ if __name__ == "__main__":
     manager = Manager()
     scores = manager.dict()
     processes = []
+    set_start_method('spawn', force=True)
 
     for n in range(nbr_tries):
         p = Process(target=hyper_param_opt, args=(eval_method, valid_proj, job_num, job_id, nbr_tries, scores))
@@ -118,8 +120,8 @@ if __name__ == "__main__":
 
     logging.config.fileConfig(
         os.path.join(curdir,"logging",'logging.conf'),
-        # defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), f"Hyper_param_logs_{eval_method}_{valid_proj[:-4]}.log")}
-        defaults={"logfilename":os.path.join(curdir, "logging", f"Hyper_param_logs_{eval_method}_{valid_proj[:-4]}.log")}
+        defaults={"logfilename":os.path.join(curdir, "logging", str(job_id), f"Hyper_param_logs_{eval_method}_{valid_proj[:-4]}.log")}
+        # defaults={"logfilename":os.path.join(curdir, "logging", f"Hyper_param_logs_{eval_method}_{valid_proj[:-4]}.log")}
     )
 
     logger = logging.getLogger('Main')
