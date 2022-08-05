@@ -57,28 +57,27 @@ def hyper_param_opt(eval_method, valid_proj, job_num, job_id, nbr_tries, scores)
 
     # random search hyper params tuning
 
-    for _ in range(nbr_tries): 
+    # Possible hyper-params
+    max_depth = random.choice([3,5,7,10,12])
+    lr = random.choice([1e0, 1e-1, 1e-2, 1e-3])
+    epsilon = random.choice([0.1, 0.2, 0.3, 0.4])
+    gamma = random.choice([1, 0.9, 0.8, 0.7, 0.5])
+    BATCH_SIZE = random.choice([32, 64, 128, 256, 512, 1024])
+    n_episodes = random.choice([200, 400, 600, 800,])
+    
+    # Initializing training instance
+    training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, lr, lr, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
 
-        # Possible hyper-params
-        max_depth = random.choice([3,5,7,10,12])
-        lr = random.choice([1e0, 1e-1, 1e-2, 1e-3])
-        epsilon = random.choice([0.1, 0.2, 0.3, 0.4])
-        gamma = random.choice([1, 0.9, 0.8, 0.7, 0.5])
-        BATCH_SIZE = random.choice([32, 64, 128, 256, 512, 1024])
-        n_episodes = random.choice([200, 400, 600, 800,])
-        # Initializing training instance
-        training = RLdecisionTreeTrain(HIDDEN_SIZE, BUFFER_SIZE, BATCH_SIZE, lr, lr, gamma, epsilon ,max_depth, use_meth_1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every)
-
-        # Starting training
-        logger.info("starting process for job {}".format(job_num))
-        logger.info(f"hyperparameters choice: max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed}")
-        
-        if eval_method=="within":
-            final_eval_score = training.within_eval(valid_proj)
-            scores[final_eval_score] = f"max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed} output={os.getpid()}"
-        else:
-            final_eval_score = training.cross_eval(valid_proj)
-            scores[final_eval_score] = f"max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed} output={os.getpid()}"
+    # Starting training
+    logger.info("starting process for job {}".format(job_num))
+    logger.info(f"hyperparameters choice: max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed}")
+    
+    if eval_method=="within":
+        final_eval_score = training.within_eval(valid_proj)
+        scores[final_eval_score] = f"max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed} output={os.getpid()}"
+    else:
+        final_eval_score = training.cross_eval(valid_proj)
+        scores[final_eval_score] = f"max_depth={max_depth} lr={lr} epsilon={epsilon} gamma={gamma} batch_size={BATCH_SIZE} n_episodes={n_episodes} seed={seed} output={os.getpid()}"
 
 
 if __name__ == "__main__":
@@ -102,7 +101,7 @@ if __name__ == "__main__":
     processes = []
     set_start_method('spawn', force=True)
 
-    for n in range(nbr_tries):
+    for _ in range(nbr_tries):
         p = Process(target=hyper_param_opt, args=(eval_method, valid_proj, job_num, job_id, nbr_tries, scores))
         processes.append(p)
         p.start()
