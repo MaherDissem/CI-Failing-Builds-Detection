@@ -21,10 +21,6 @@ def generate_state(model, features, thresholds, nbr_of_conv, use_meth_1, number_
 
 
 
-#==================================================================================================================================#
-
-
-
 
 def tree_convolution_1(model, features, thresholds, node=0):
     """
@@ -74,25 +70,26 @@ def tree_convolution_1(model, features, thresholds, node=0):
 
 def flatten(features, thresholds):
     # removing null values
-    clean_feat, clean_thres = [], []
-    for i in range(len(features)):
-        if features[i]!=-2:
-            clean_feat.append(features[i])
-            clean_thres.append(thresholds[i])
-    return torch.cat((torch.FloatTensor(clean_feat), torch.FloatTensor(clean_thres))).to(device)
+    # clean_feat, clean_thres = [], []
+    # for i in range(len(features)):
+    #     if features[i]!=-2:
+    #         clean_feat.append(features[i])
+    #         clean_thres.append(thresholds[i])
+    # return torch.cat((torch.FloatTensor(clean_feat), torch.FloatTensor(clean_thres))).to(device)
+
+    return torch.cat((torch.tensor(features!=-2, device=device), torch.tensor(thresholds!=-2,device=device)))
 
 
 
-def generate_state_1(model, features, thresholds, nbr_of_conv):
+
+def generate_state_1(model, features, thresholds, nbr_of_conv=0):
+    """ for this method, we just concat the features and thresholds vectors, without applying convolution"""
     features, thresholds = features.copy(), thresholds.copy()
-    for _ in range(nbr_of_conv):
-        new_features, new_thresholds = tree_convolution_1(model, features, thresholds) # model must be fitted => add condition?
+    for _ in range(nbr_of_conv): 
+        new_features, new_thresholds = tree_convolution_1(model, features, thresholds) # model must be fitted
         features, thresholds = new_features, new_thresholds
     return flatten(features, thresholds)
 
-
-
-#==================================================================================================================================#
 
 
 
@@ -211,7 +208,7 @@ def shorten_state(encoded_nodes, number_of_attributes):
         if node is None:
             out_size -= number_of_attributes
     
-    out = torch.zeros(out_size).to(device)
+    out = torch.zeros(out_size, device=device)
     
     # removing None values / terminal nodes
     k = -1
@@ -228,6 +225,6 @@ def shorten_state(encoded_nodes, number_of_attributes):
 def generate_state_2(model, nbr_of_conv, number_of_attributes):
     encoded_nodes = encode_tree(model, number_of_attributes)
     for _ in range(nbr_of_conv):
-        new_encoded_nodes = tree_convolution_2(model, encoded_nodes, number_of_attributes) # model must be fitted => add condition?
+        new_encoded_nodes = tree_convolution_2(model, encoded_nodes, number_of_attributes) # model must be fitted
         encoded_nodes = new_encoded_nodes
     return shorten_state(encoded_nodes, number_of_attributes)

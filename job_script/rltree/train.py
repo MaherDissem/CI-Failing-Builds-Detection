@@ -11,13 +11,15 @@ import torch
 #from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-
 from rltree.decisionTree import modDecisionTree
 from rltree.agent import Agent
 from rltree.environment import generate_state
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class RLdecisionTreeTrain:
+
+
     def __init__(self, hidden_size, buffer_size, batch_size, lr_actor, lr_critic, gamma, epsilon, max_depth, use_method1, nbr_of_conv, n_episodes, curdir, seed, columns, cols_to_keep, save_every):
         self.logger = logging.getLogger('Training')
         self.hidden_size = hidden_size
@@ -38,8 +40,8 @@ class RLdecisionTreeTrain:
         self.columns = columns
         self.cols_to_keep = cols_to_keep
         self.save_every = save_every
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        
+    
+
     def train(self, X_train, y_train, X_val, y_val, df, eval_meth):
 
         t0 = time.time()
@@ -59,7 +61,8 @@ class RLdecisionTreeTrain:
         state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
         state_size = len(state)+1
 
-        agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, self.hidden_size, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
+        # manually setting hidden size = state_size//2
+        agent = Agent(state_size, threshold_vector_size, number_of_attributes, self.seed, state_size//2, self.lr_actor, self.lr_critic, self.buffer_size, self.batch_size, self.gamma, self.curdir)
 
         self.logger.info(f'tree depth={self.max_depth}, state size={state_size}, number of attribute={number_of_attributes}')
 
@@ -68,6 +71,12 @@ class RLdecisionTreeTrain:
                 os.mkdir(p)
         #os.system('mkdir -p checkpoints results')
         #os.system('rm -f checkpoints/*')
+
+        with open(os.path.join(self.curdir,"results",f"{eval_meth}-{os.getpid()}.csv"),'a') as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow([eval_meth])
+            csv_writer.writerow([f"max_depth={self.max_depth} lr={self.lr_actor} epsilon={self.epsilon} gamma={self.gamma} batch_size={self.batch_size} n_episodes={self.n_episodes} seed={self.seed}"])
+
         start_ep = 1 # do not change
 
         # load checkpoint (comment/uncomment)
@@ -82,7 +91,7 @@ class RLdecisionTreeTrain:
             model = modDecisionTree(max_depth=self.max_depth)
             model.fit(X_train, y_train, df.columns)
             state = generate_state(model, model.features, model.thresholds, self.nbr_of_conv, self.use_method1, number_of_attributes)
-            state = torch.cat((torch.Tensor([0]).to(self.device), state))
+            state = torch.cat((torch.Tensor([0]).to(device), state))
             self.prev_metric = 0
 
             #for t in tqdm(range(model.n_nodes)):
@@ -94,12 +103,12 @@ class RLdecisionTreeTrain:
                 next_state, reward, done, info = self.env_step(model, t, action, X_train, y_train, number_of_attributes)
                 if reward+0.1<0:
                     break
-                next_state = torch.cat((torch.Tensor([t]).to(self.device), next_state))
+                next_state = torch.cat((torch.Tensor([t]).to(device), next_state))
                 agent.step(state, action, reward, next_state, done)
                 state = next_state
                 res = model.evaluate(X_val, y_val, False, False)
                 f1score, AUC = res['F1'], res['AUC']
-                if done:
+                if done: 
                     break
 
             # save checkpoint to resume training
@@ -107,18 +116,23 @@ class RLdecisionTreeTrain:
                 agent.save_checkpoint(i_episode)
 
             # save results to a csv file
-            with open(os.path.join(self.curdir,"results",f"{eval_meth}.csv"),'a') as f:
+            with open(os.path.join(self.curdir,"results",f"{eval_meth}-{os.getpid()}.csv"),'a') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerow([i_episode, f1score, AUC])
-                                    
+            
+            # save results for Tensorboard
+            #tb_writer.add_scalar("Average F1 score", f1score, i_episode)
+
+            # display classification metrics
             self.logger.info("Episode: {}, F1 score: {} AUC: {}".format(i_episode, f1score, AUC))
 
 
-        self.logger.info("final score: {}".format(model.evaluate(X_val, y_val, False, True)))
+        self.logger.info("final score: {}".format(model.evaluate(X_val, y_val, False, False)))
 
         t1 = time.time()
-        self.logger.info("training took {} min!\n".format((t1-t0)/60))
+        self.logger.info("training took {} min".format((t1-t0)/60))
 
+        return model.evaluate(X_val, y_val, False, False)['F1']
 
 
 
@@ -154,7 +168,7 @@ class RLdecisionTreeTrain:
 
         eval_meth = f'within_proj_{valid_proj}'[:-4]
 
-        self.train(X_train, y_train, X_val, y_val, df, eval_meth)
+        return self.train(X_train, y_train, X_val, y_val, df, eval_meth)
 
     
     def cross_eval(self, valid_proj):
@@ -176,5 +190,5 @@ class RLdecisionTreeTrain:
 
         eval_meth = f'cross_proj_{valid_proj}'[:-4]
 
-        self.train(X_train, y_train, X_val, y_val, df, eval_meth)
+        return self.train(X_train, y_train, X_val, y_val, df, eval_meth)
 
