@@ -16,5 +16,7 @@ This repository contains:
 - A novel Deep Reinforcement Learning based approach to build an optimal decision tree that account for data imbalance to classify commits. inspired by [3]
 
 [1] Detecting continuous integration skip commits using multi-objective evolutionary search, Islem Saidani, Ali Ouni, and Mohamed Wiem Mkaouer
+
 [2] Improving the prediction of continuous integration build failures using deep learning, Islem Saidani, Ali Ouni, and Mohamed Wiem Mkaouer
+
 [3] Building decision tree for imbalanced classification via deep reinforcement learning, Guixuan Wen and Kaigui Wu
