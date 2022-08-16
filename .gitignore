@@ -2,15 +2,10 @@ __pycache__
 job_script/logging/
 
 dataset/
-dataset1/
-ordered-data
+ordered-data/
+utils/
 
 **.xlsx
 checkpoints/
 results/
 runs/
-
-metrics.py
-modDT.ipynb
-rl-tests.ipynb
-Running-DL-CI-LSTM.ipynb
