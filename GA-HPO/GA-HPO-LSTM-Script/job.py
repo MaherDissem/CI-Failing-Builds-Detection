@@ -549,9 +549,9 @@ def train(bellwether):
                 entry["algo"] = "LSTM"
                 # save results to a csv file
     with open(f"LSTM-HPO-{bellwether}.csv", 'a') as f:
-        csv_writer = csv.writer(f)
-        csv_writer.writerow([entry_train])
-        csv_writer.writerow([entry])
+        csv_writer = csv.DictWriter(f)
+        csv_writer.writerow(entry_train)
+        csv_writer.writerow(entry)
 
 import sys
 
