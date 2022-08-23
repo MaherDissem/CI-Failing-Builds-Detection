@@ -524,6 +524,7 @@ def evaluate_tuner(tuner_option, train_set):
 # %%
 import pandas as pd
 import os
+import csv
 
 global columns_res,columns_comp
 columns_res = ["proj"]+["algo"]+["iter"]+["AUC"]+["accuracy"]+["F1"]+["exp"]
@@ -531,14 +532,12 @@ tuner = "ga"
 # bellwether="steve.csv"
 
 def train(bellwether):
-    results_train = pd.DataFrame(columns =  columns_res)
     trainset = getDataset_2(bellwether,"train")
     for iteration in range (1,nbr_rep):
         entry_train  = evaluate_tuner(tuner,trainset)
         best_params = entry_train["params"]
         best_model = entry_train["model"]
         entry_train["proj"] = bellwether
-        results_train.append(entry_train,ignore_index=True)
         for file_name in os.listdir("ordered-data"):
             if file_name!=bellwether:
                 testset = getDataset_2(file_name,"test")
@@ -548,8 +547,11 @@ def train(bellwether):
                 entry["proj"] = file_name
                 entry["exp"] =  1
                 entry["algo"] = "LSTM"
-                results_train.append(entry,ignore_index=True)
-    results_train.to_excel("LSTM-HPO-{bellwether}.xlsx")
+                # save results to a csv file
+    with open(f"LSTM-HPO-{bellwether}.csv", 'a') as f:
+        csv_writer = csv.writer(f)
+        csv_writer.writerow([entry_train])
+        csv_writer.writerow([entry])
 
 import sys
 
