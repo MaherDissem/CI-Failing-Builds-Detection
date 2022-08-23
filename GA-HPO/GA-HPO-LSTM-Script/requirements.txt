@@ -4,3 +4,8 @@ hpbandster
 hyperopt
 openpyxl 
 imblearn
+keras
+sklearn
+pandas
+numpy
+tensorflow
