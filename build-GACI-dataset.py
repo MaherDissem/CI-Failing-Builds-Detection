@@ -2,15 +2,16 @@ import requests
 from requests.exceptions import HTTPError
 
 USERNAME = 'MaherDissem'
-TOEKN = '' # Expires on Sat, Oct 22 2022. 
+TOKEN = '' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
 def get_CM_list(owner,repo):
     try:
         page = 0
+        count = 0; total = 0
         while True:
             request = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=100&page={page}"
-            r = requests.get(request, auth=(USERNAME, TOEKN))
+            r = requests.get(request, auth=(USERNAME, TOKEN))
             r.raise_for_status()
             response = r.json()
             l = len(response)
@@ -20,10 +21,12 @@ def get_CM_list(owner,repo):
                 commit_msg = response[i]['commit']['message']
                 # print(commit_msg)
                 if "CI SKIP" in commit_msg.upper() or "SKIP CI" in commit_msg.upper() or "CI-SKIP" in commit_msg.upper() or "SKIP-CI" in commit_msg.upper():
-                    print(commit_msg)
-                    # CI-skip = True
-                # generate other commit features
+                    # CI-skip feature = True
+                    count += 1
+                total += 1
+                # generate other commit features here
             page += 1
+        print(f"{count/total*100:.2f}% of commits are CI-skipped")
 
     except HTTPError as http_err:
         print(f'HTTP error occurred: {http_err}')
@@ -34,9 +37,9 @@ def get_CM_list(owner,repo):
 
 
 def uses_GA(owner,repo):
-    # try:
-        request = f"https://api.github.com/repos/{owner}/{repo}/git/trees/main?recursive=1"
-        r = requests.get(request, auth=(USERNAME, TOEKN))
+    try:
+        request = f"https://api.github.com/repos/{owner}/{repo}/git/trees/master?recursive=1" # 'master' branch was renamed to 'main' in 2020
+        r = requests.get(request, auth=(USERNAME, TOKEN))
         r.raise_for_status()
         response = r.json()
         l = len(response['tree'])
@@ -44,13 +47,16 @@ def uses_GA(owner,repo):
             file_path = response['tree'][i]['path']
             # print(file_path)
             if ".github/workflows" in file_path:
+                print(file_path)
                 return True
         return False
 
-    # except HTTPError as http_err:
-    #     print(f'HTTP error occurred: {http_err}')
-    # except Exception as err:
-    #     print(f'Other error occurred: {err}')
+    except HTTPError as http_err:
+        print(f'HTTP error occurred: {http_err}')
+    except Exception as err:
+        print(f'Other error occurred: {err}')
 
-uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
+# uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
+uses_GA(owner="antongolub", repo="action-setup-bun")
+get_CM_list(owner="antongolub", repo="action-setup-bun")
 
