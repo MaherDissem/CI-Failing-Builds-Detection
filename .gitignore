@@ -3,6 +3,7 @@ job_script/logging/
 
 dataset/
 ordered-data/
+TT-selected-projects/
 utils/
 
 **.xlsx
