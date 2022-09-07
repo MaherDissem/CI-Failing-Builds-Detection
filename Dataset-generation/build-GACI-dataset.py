@@ -7,7 +7,7 @@ from math import log2
 from datetime import datetime
 
 USERNAME = 'MaherDissem'
-TOKEN = '' # Expires on Sat, Oct 22 2022. 
+TOKEN = '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' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
 def get_features(owner,repo):
@@ -23,7 +23,8 @@ def get_features(owner,repo):
     features['ld'] = []
     features['lt'] = []
     features['is_fix'] = []
-    features['age'] = []
+    features['age'] = [] # average time between the current and previous file change
+    features['nbr_dev'] = []
 
     os.chdir("/home/maher") # to avoid git dublious ownership error
     res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
@@ -39,7 +40,7 @@ def get_features(owner,repo):
             if l==0:
                 break
             for i in range(l):
-                print(features)
+                # print(features)
                 # sha
                 sha = response[i]['sha']
                 features['sha_list'].append(sha)
@@ -77,7 +78,7 @@ def get_features(owner,repo):
                     else:
                         folder_name = '.'
                     directories.add(folder_name)
-                    features['mod_directories'].append(len(directories))
+                features['mod_directories'].append(len(directories))
                 
                 # nbr of modified subsystems
                 subsystems = set()
@@ -89,7 +90,7 @@ def get_features(owner,repo):
                     else:
                         root_name = '/'
                     subsystems.add(root_name)
-                    features['mod_subsystems'].append(len(subsystems)) 
+                features['mod_subsystems'].append(len(subsystems)) 
                 
                 # nbr of added lines
                 additions = c_response['stats']['additions']
@@ -122,21 +123,30 @@ def get_features(owner,repo):
                 else:
                     features['is_fix'].append(False)
 
-                # history features
+                # age
                 avg_time = 0
+                commiters = set()
                 for j in range(nbr_files):
                     file_path = c_response['files'][j]['filename']
-                    file_edit_date = c_response['commit']['committer']['date']
+                    file_edit_date = c_response['commit']['author']['date']
 
                     file_mod_request = f"https://api.github.com/repos/{owner}/{repo}/commits?path={file_path}&until={file_edit_date}" #2022-06-01T23:59:59Z"
                     dr = requests.get(file_mod_request, auth=(USERNAME, TOKEN))
                     dr.raise_for_status()
                     d_response = dr.json()
 
-                    prev_date = d_response[1]['commit']['committer']['date']
+                    prev_date = d_response[1]['commit']['author']['date']
                     delta_time = (datetime.strptime(file_edit_date,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(prev_date,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
                     avg_time += delta_time
+
+                    # nbr of dev
+                    nbr_mod_files = d_response.__len__()
+                    for k in range(nbr_mod_files):
+                        commiters.add(d_response[k]['commit']['author']['name'])
+
                 features['age'].append(avg_time/nbr_files)
+                features['nbr_dev'].append(commiters.__len__())
+
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
         print(pd.DataFrame(features))
