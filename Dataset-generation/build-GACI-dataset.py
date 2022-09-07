@@ -1,3 +1,4 @@
+from sys import stdout
 import requests
 from requests.exceptions import HTTPError
 import pandas as pd
@@ -26,8 +27,8 @@ def get_features(owner,repo):
     features['age'] = [] # average time between the current and previous file change
     features['nbr_dev'] = [] # number of developers that previously changed the affected file
 
-    os.chdir("/home/maher") # to avoid git dublious ownership error
-    res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
+    # os.chdir("/home/maher") # to avoid git dublious ownership error
+    # res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
     
     try:
         page = 0
@@ -64,7 +65,6 @@ def get_features(owner,repo):
                 cr = requests.get(c_request, auth=(USERNAME, TOKEN))
                 cr.raise_for_status()
                 c_response = cr.json()
-
                 # nbr of modified files
                 nbr_files = c_response['files'].__len__()
                 features['mod_files'].append(nbr_files)
@@ -105,12 +105,11 @@ def get_features(owner,repo):
                 # nbr of lines of modified files
                 sum = 0
                 for j in range(nbr_files):
-                    path = c_response['files'][j]['filename']
-                    full_path = os.path.join(os.path.curdir,repo, path)
-                    wc = subprocess.check_output(f'wc {full_path}', shell=True)
+                    raw_url = c_response['files'][j]['raw_url']
+                    wc = subprocess.check_output(f"curl {raw_url} -L | wc", shell=True, stderr=subprocess.DEVNULL)
                     sum += int(wc.split()[0])
                 features['lt'].append(sum)
-                # modify this to check lt before the commit?
+
 
                 # entropy        
                 entropy = 0
@@ -184,6 +183,6 @@ def uses_GA(owner,repo):
         print(f'Other error occurred: {err}')
 
 # uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
-# get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
+get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
 get_features(owner="antongolub", repo="action-setup-bun")
 
