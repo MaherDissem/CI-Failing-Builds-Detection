@@ -7,7 +7,7 @@ from math import log2
 from datetime import datetime
 
 USERNAME = 'MaherDissem'
-TOKEN = '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' # Expires on Sat, Oct 22 2022. 
+TOKEN = '' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
 def get_features(owner,repo):
@@ -146,6 +146,7 @@ def get_features(owner,repo):
 
                 features['age'].append(avg_time/nbr_files)
                 features['nbr_dev'].append(commiters.__len__())
+
 
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
