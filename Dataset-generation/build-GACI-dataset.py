@@ -137,8 +137,11 @@ def get_features(owner,repo):
                     dr = requests.get(file_mod_request, auth=(USERNAME, TOKEN))
                     dr.raise_for_status()
                     d_response = dr.json()
-
-                    prev_date = d_response[1]['commit']['author']['date']
+                    
+                    if len(d_response)>=2:
+                        prev_date = d_response[1]['commit']['author']['date']
+                    else:
+                        prev_date = file_edit_date
                     delta_time = (datetime.strptime(file_edit_date,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(prev_date,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
                     avg_time += delta_time
 
