@@ -11,23 +11,24 @@ TOKEN = '' # Expires on Sat, Oct 22 2022.
 # 1,000 requests per hour per repository
 
 def get_features(owner,repo):
-    features = {}
-    features['sha_list'] = []
-    features['messages'] = []
-    features['ci_skipped'] = []
-    features['mod_files'] = []
-    features['mod_directories'] = []
-    features['mod_subsystems'] = []
-    features['entropy'] = []
-    features['la'] = []
-    features['ld'] = []
-    features['lt'] = []
-    features['is_fix'] = []
+    features = {} # output
+    features['sha_list'] = [] # commit hash
+    features['messages'] = [] # commit message
+    features['ci_skipped'] = [] # target feature
+    features['mod_files'] = [] # number of modified files 
+    features['mod_directories'] = [] # number of modified directories
+    features['mod_subsystems'] = [] # number of modified subsystems, path is /subsystem/folder/.../directory/file
+    features['entropy'] = [] # distribution of changes across files
+    features['la'] = [] # number of lines added
+    features['ld'] = [] # number of lines deleted
+    features['lt'] = [] # number of lines in file before the commit
+    features['is_fix'] = [] # commit message contains fix keywords
     features['age'] = [] # average time between the current and previous file change
-    features['nbr_dev'] = []
+    features['nbr_dev'] = [] # number of developers that previously changed the affected file
 
     os.chdir("/home/maher") # to avoid git dublious ownership error
     res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
+    
     try:
         page = 0
         count = 0; total = 0
@@ -39,8 +40,9 @@ def get_features(owner,repo):
             l = len(response)
             if l==0:
                 break
-            for i in range(l):
+            for i in range(l): # for commit
                 # print(features)
+
                 # sha
                 sha = response[i]['sha']
                 features['sha_list'].append(sha)
@@ -108,6 +110,7 @@ def get_features(owner,repo):
                     wc = subprocess.check_output(f'wc {full_path}', shell=True)
                     sum += int(wc.split()[0])
                 features['lt'].append(sum)
+                # modify this to check lt before the commit?
 
                 # entropy        
                 entropy = 0
@@ -139,7 +142,7 @@ def get_features(owner,repo):
                     delta_time = (datetime.strptime(file_edit_date,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(prev_date,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
                     avg_time += delta_time
 
-                    # nbr of dev
+                # nbr of dev
                     nbr_mod_files = d_response.__len__()
                     for k in range(nbr_mod_files):
                         commiters.add(d_response[k]['commit']['author']['name'])
@@ -147,7 +150,8 @@ def get_features(owner,repo):
                 features['age'].append(avg_time/nbr_files)
                 features['nbr_dev'].append(commiters.__len__())
 
-
+                # 
+                    
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
         print(pd.DataFrame(features))
@@ -167,9 +171,7 @@ def uses_GA(owner,repo):
         l = len(response['tree'])
         for i in range(l):
             file_path = response['tree'][i]['path']
-            # print(file_path)
             if ".github/workflows" in file_path:
-                print(file_path)
                 return True
         return False
 
@@ -179,6 +181,6 @@ def uses_GA(owner,repo):
         print(f'Other error occurred: {err}')
 
 # uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
-get_features(owner="antongolub", repo="action-setup-bun")
 # get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
+get_features(owner="antongolub", repo="action-setup-bun")
 
