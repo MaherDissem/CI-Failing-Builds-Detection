@@ -25,6 +25,8 @@ def get_features(owner,repo):
     features['age'] = [] # average time between the current and previous file change
     features['nbr_dev'] = [] # number of developers that previously changed the affected file
     features['dev_exp'] = [] # number of previous commits of user to this repo
+    features['s_dev_exp'] = [] # avg exp on each modified subsystem
+    features['r_exp'] = [] # recent exp is experience weighted by timedeltas
 
     # os.chdir("/home/maher") # to avoid git dublious ownership error
     # res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
@@ -89,7 +91,7 @@ def get_features(owner,repo):
                     if len(folders)>=2:
                         root_name = folders[0]
                     else:
-                        root_name = '/'
+                        root_name = ''
                     subsystems.add(root_name)
                 features['mod_subsystems'].append(len(subsystems)) 
                 
@@ -160,6 +162,19 @@ def get_features(owner,repo):
                 e_response = er.json()
                 exp = len(e_response)
                 features['dev_exp'].append(exp)
+
+                # subsystem experience
+                sum = 0
+                for subsystem in subsystems:
+                    s_request = f"https://api.github.com/repos/{owner}/{repo}/commits?author={author}&path={subsystem}&until={date}&per_page=100"
+                    sr = requests.get(s_request, auth=(USERNAME, TOKEN))
+                    sr.raise_for_status()
+                    s_response = sr.json()
+                    sum += len(s_response)
+                avg_sexp = sum/len(subsystems)
+                features['s_dev_exp'].append(avg_sexp)
+
+                # recent exp
 
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
