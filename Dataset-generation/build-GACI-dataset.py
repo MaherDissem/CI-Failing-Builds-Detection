@@ -9,6 +9,8 @@ USERNAME = 'MaherDissem'
 TOKEN = '' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
+delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
+
 def get_features(owner,repo):
     features = {} # output
     features['sha_list'] = [] # commit hash
@@ -111,7 +113,6 @@ def get_features(owner,repo):
                     sum += int(wc.split()[0])
                 features['lt'].append(sum)
 
-
                 # entropy        
                 entropy = 0
                 total_changes = c_response['stats']['total']
@@ -142,8 +143,8 @@ def get_features(owner,repo):
                         prev_date = d_response[1]['commit']['author']['date']
                     else:
                         prev_date = file_edit_date
-                    delta_time = (datetime.strptime(file_edit_date,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(prev_date,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
-                    avg_time += delta_time
+                    delta_t = delta_time(file_edit_date, prev_date)
+                    avg_time += delta_t
 
                 # nbr of dev (that modified each file in the commit)
                     nbr_file_modifications = d_response.__len__()
@@ -164,17 +165,27 @@ def get_features(owner,repo):
                 features['dev_exp'].append(exp)
 
                 # subsystem experience
-                sum = 0
+                total_commits = 0
+                weighted_exp = 0
                 for subsystem in subsystems:
                     s_request = f"https://api.github.com/repos/{owner}/{repo}/commits?author={author}&path={subsystem}&until={date}&per_page=100"
                     sr = requests.get(s_request, auth=(USERNAME, TOKEN))
                     sr.raise_for_status()
                     s_response = sr.json()
-                    sum += len(s_response)
-                avg_sexp = sum/len(subsystems)
-                features['s_dev_exp'].append(avg_sexp)
+                    total_commits += len(s_response)
 
-                # recent exp
+                # recent exp on subsystem
+                    time_deltas = 0
+                    for k in range(len(s_response)):
+                        contrib_date = s_response[k]['commit']['author']['date']
+                        contrib_age = delta_time(date, contrib_date)
+                        time_deltas += contrib_age
+                    weighted_exp += time_deltas/len(s_response)
+
+                features['s_dev_exp'].append(total_commits/len(subsystems))
+                features['r_exp'].append(weighted_exp/len(subsystems))
+
+                # 
 
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
