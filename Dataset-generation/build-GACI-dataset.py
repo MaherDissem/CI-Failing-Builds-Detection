@@ -1,9 +1,7 @@
-from sys import stdout
 import requests
 from requests.exceptions import HTTPError
 import pandas as pd
 import subprocess
-import os
 from math import log2
 from datetime import datetime
 
@@ -26,6 +24,7 @@ def get_features(owner,repo):
     features['is_fix'] = [] # commit message contains fix keywords
     features['age'] = [] # average time between the current and previous file change
     features['nbr_dev'] = [] # number of developers that previously changed the affected file
+    features['dev_exp'] = [] # number of previous commits of user to this repo
 
     # os.chdir("/home/maher") # to avoid git dublious ownership error
     # res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
@@ -144,16 +143,24 @@ def get_features(owner,repo):
                     delta_time = (datetime.strptime(file_edit_date,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(prev_date,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
                     avg_time += delta_time
 
-                # nbr of dev
-                    nbr_mod_files = d_response.__len__()
-                    for k in range(nbr_mod_files):
+                # nbr of dev (that modified each file in the commit)
+                    nbr_file_modifications = d_response.__len__()
+                    for k in range(nbr_file_modifications):
                         commiters.add(d_response[k]['commit']['author']['name'])
 
                 features['age'].append(avg_time/nbr_files)
                 features['nbr_dev'].append(commiters.__len__())
 
-                # 
-                    
+                # dev_exp
+                author = response[i]['commit']['author']['name']
+                date = response[i]['commit']['author']['date']
+                e_request = f"https://api.github.com/repos/{owner}/{repo}/commits?author={author}&until={date}&per_page=100"
+                er = requests.get(e_request, auth=(USERNAME, TOKEN))
+                er.raise_for_status()
+                e_response = er.json()
+                exp = len(e_response)
+                features['dev_exp'].append(exp)
+
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
         print(pd.DataFrame(features))
