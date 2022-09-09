@@ -24,9 +24,9 @@ def get_features(owner,repo):
     features['ld'] = [] # number of lines deleted
     features['lt'] = [] # number of lines in file before the commit
     features['is_fix'] = [] # commit message contains fix keywords
-    features['is_doc'] = [] # commit affects .md files
-    features['is_meta'] = [] # commit affects .ignore and such files
-    features['is_src'] = [] # commit affects source files
+    features['doc_edit'] = [] # commit edits .md files
+    features['meta_edit'] = [] # commit edits .ignore and such files
+    features['src_edit'] = [] # commit edits source files
     features['age'] = [] # average time between the current and previous file change
     features['nbr_dev'] = [] # number of developers that previously changed the affected file
     features['dev_exp'] = [] # number of previous commits of user to this repo
@@ -79,6 +79,9 @@ def get_features(owner,repo):
                 subsystems = set()
                 sum = 0
                 entropy = 0
+                doc_edit = False
+                meta_edit = False
+                src_edit = False
                 avg_time = 0
                 commiters = set()
                 total_changes = c_response['stats']['total']
@@ -114,23 +117,17 @@ def get_features(owner,repo):
                     name = path.split('.')[0].upper()
                     ext = path.split('.')[-1].upper()
                     
-                    # is_doc
+                    # doc_edit
                     if "MD"==ext or "TXT"==ext:
-                        features['is_doc'].append(True)
-                    else:
-                        features['is_doc'].append(False)
+                        doc_edit = True
 
-                    # is_meta
-                    if "IGNORE"==ext:
-                        features['is_meta'].append(True)
-                    else:
-                        features['is_meta'].append(False)
+                    # meta_edit
+                    if "IGNORE"==ext or name in ["LICENSE", "COPYRIGHT"]:
+                        meta_edit = True
 
-                    # is_src
-                    if ext not in ["PY", "CPP", "JAVA"] or name in ["LICENSE", "COPYRIGHT"]:
-                        features['is_src'].append(False)
-                    else:
-                        features['is_src'].append(True)
+                    # src_edit
+                    if ext in ["PY", "CPP", "JAVA"]:
+                        src_edit = True
                     
                     # age
                     file_path = c_response['files'][j]['filename']
@@ -154,7 +151,10 @@ def get_features(owner,repo):
                 features['mod_directories'].append(len(directories))
                 features['mod_subsystems'].append(len(subsystems)) 
                 features['lt'].append(sum)
-                features['entropy'] = entropy
+                features['entropy'].append(entropy)
+                features['doc_edit'].append(doc_edit)
+                features['meta_edit'].append(meta_edit)
+                features['src_edit'].append(src_edit)
                 features['age'].append(avg_time/nbr_files)
                 features['nbr_dev'].append(commiters.__len__())
                 
