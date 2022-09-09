@@ -9,7 +9,7 @@ USERNAME = 'MaherDissem'
 TOKEN = '' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
-delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/60
+delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/360/24
 
 def get_features(owner,repo):
     features = {} # output
@@ -24,6 +24,9 @@ def get_features(owner,repo):
     features['ld'] = [] # number of lines deleted
     features['lt'] = [] # number of lines in file before the commit
     features['is_fix'] = [] # commit message contains fix keywords
+    features['is_doc'] = [] # commit affects .md files
+    features['is_meta'] = [] # commit affects .ignore and such files
+    features['is_src'] = [] # commit affects source files
     features['age'] = [] # average time between the current and previous file change
     features['nbr_dev'] = [] # number of developers that previously changed the affected file
     features['dev_exp'] = [] # number of previous commits of user to this repo
@@ -45,7 +48,7 @@ def get_features(owner,repo):
             if l==0:
                 break
             for i in range(l): # for commit
-                # print(features)
+                print(features)
 
                 # sha
                 sha = response[i]['sha']
@@ -126,6 +129,28 @@ def get_features(owner,repo):
                     features['is_fix'].append(True)
                 else:
                     features['is_fix'].append(False)
+
+                # is_doc
+                for j in range(nbr_files):
+                    file_path = c_response['files'][j]['filename']
+                    name = file_path.split('.')[0].upper()
+                    ext = file_path.split('.')[-1].upper()
+                    if "MD"==ext or "TXT"==ext:
+                        features['is_doc'].append(True)
+                    else:
+                        features['is_doc'].append(False)
+
+                # is_meta
+                    if "IGNORE"==ext:
+                        features['is_meta'].append(True)
+                    else:
+                        features['is_meta'].append(False)
+
+                # is_src
+                    if ext not in ["PY", "CPP", "JAVA"] or name in ["LICENSE", "COPYRIGHT"]:
+                        features['is_src'].append(False)
+                    else:
+                        features['is_src'].append(True)
 
                 # age
                 avg_time = 0
