@@ -6,7 +6,7 @@ from math import log2
 from datetime import datetime
 
 USERNAME = 'MaherDissem'
-TOKEN = '' # Expires on Sat, Oct 22 2022. 
+TOKEN = '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' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
 delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/360/24
@@ -75,9 +75,15 @@ def get_features(owner,repo):
                 nbr_files = c_response['files'].__len__()
                 features['mod_files'].append(nbr_files)
                 
-                # nbr of modified directories
                 directories = set()
+                subsystems = set()
+                sum = 0
+                entropy = 0
+                avg_time = 0
+                commiters = set()
+                total_changes = c_response['stats']['total']
                 for j in range(nbr_files):
+                    # nbr of modified directories
                     path = c_response['files'][j]['filename']
                     folders = path.split('/')
                     if len(folders)>=2:
@@ -86,11 +92,8 @@ def get_features(owner,repo):
                     else:
                         folder_name = '.'
                     directories.add(folder_name)
-                features['mod_directories'].append(len(directories))
-                
-                # nbr of modified subsystems
-                subsystems = set()
-                for j in range(nbr_files):
+
+                    # nbr of modified subsystems
                     path = c_response['files'][j]['filename']
                     folders = path.split('/')
                     if len(folders)>=2:
@@ -98,7 +101,62 @@ def get_features(owner,repo):
                     else:
                         root_name = ''
                     subsystems.add(root_name)
+
+                    # nbr of lines of files prior to the commit
+                    raw_url = c_response['files'][j]['raw_url']
+                    wc = subprocess.check_output(f"curl {raw_url} -L | wc", shell=True, stderr=subprocess.DEVNULL)
+                    sum += int(wc.split()[0])
+
+                    # entropy    
+                    file_changes = c_response['files'][j]['changes']
+                    entropy -= file_changes/(total_changes or 0.99)*log2(file_changes/(total_changes or 0.99)) # because total_changes==0 when the commit consists of a file upload
+
+                    name = path.split('.')[0].upper()
+                    ext = path.split('.')[-1].upper()
+                    
+                    # is_doc
+                    if "MD"==ext or "TXT"==ext:
+                        features['is_doc'].append(True)
+                    else:
+                        features['is_doc'].append(False)
+
+                    # is_meta
+                    if "IGNORE"==ext:
+                        features['is_meta'].append(True)
+                    else:
+                        features['is_meta'].append(False)
+
+                    # is_src
+                    if ext not in ["PY", "CPP", "JAVA"] or name in ["LICENSE", "COPYRIGHT"]:
+                        features['is_src'].append(False)
+                    else:
+                        features['is_src'].append(True)
+                    
+                    # age
+                    file_path = c_response['files'][j]['filename']
+                    file_edit_date = c_response['commit']['author']['date']
+                    file_mod_request = f"https://api.github.com/repos/{owner}/{repo}/commits?path={file_path}&until={file_edit_date}" #2022-06-01T23:59:59Z"
+                    dr = requests.get(file_mod_request, auth=(USERNAME, TOKEN))
+                    dr.raise_for_status()
+                    d_response = dr.json()
+                    if len(d_response)>=2:
+                        prev_date = d_response[1]['commit']['author']['date']
+                    else:
+                        prev_date = file_edit_date
+                    delta_t = delta_time(file_edit_date, prev_date)
+                    avg_time += delta_t
+
+                    # nbr of dev (that modified each file in the commit)
+                    nbr_file_modifications = d_response.__len__()
+                    for k in range(nbr_file_modifications):
+                        commiters.add(d_response[k]['commit']['author']['name'])
+
+                features['mod_directories'].append(len(directories))
                 features['mod_subsystems'].append(len(subsystems)) 
+                features['lt'].append(sum)
+                features['entropy'] = entropy
+                features['age'].append(avg_time/nbr_files)
+                features['nbr_dev'].append(commiters.__len__())
                 
                 # nbr of added lines
                 additions = c_response['stats']['additions']
@@ -108,79 +166,14 @@ def get_features(owner,repo):
                 deletions = c_response['stats']['deletions']
                 features['ld'].append(deletions)
 
-                # nbr of lines of modified files
-                sum = 0
-                for j in range(nbr_files):
-                    raw_url = c_response['files'][j]['raw_url']
-                    wc = subprocess.check_output(f"curl {raw_url} -L | wc", shell=True, stderr=subprocess.DEVNULL)
-                    sum += int(wc.split()[0])
-                features['lt'].append(sum)
-
-                # entropy        
-                entropy = 0
-                total_changes = c_response['stats']['total']
-                for j in range(nbr_files):
-                    file_changes = c_response['files'][j]['changes']
-                    entropy -= file_changes/total_changes*log2(file_changes/total_changes)
-                features['entropy'] = entropy
-
                 # is_fix
                 if "FIX" in commit_msg.upper() or "PATCH" in commit_msg.upper() or "DEFECT" in commit_msg.upper() or "BUG" in commit_msg.upper():
                     features['is_fix'].append(True)
                 else:
                     features['is_fix'].append(False)
-
-                # is_doc
-                for j in range(nbr_files):
-                    file_path = c_response['files'][j]['filename']
-                    name = file_path.split('.')[0].upper()
-                    ext = file_path.split('.')[-1].upper()
-                    if "MD"==ext or "TXT"==ext:
-                        features['is_doc'].append(True)
-                    else:
-                        features['is_doc'].append(False)
-
-                # is_meta
-                    if "IGNORE"==ext:
-                        features['is_meta'].append(True)
-                    else:
-                        features['is_meta'].append(False)
-
-                # is_src
-                    if ext not in ["PY", "CPP", "JAVA"] or name in ["LICENSE", "COPYRIGHT"]:
-                        features['is_src'].append(False)
-                    else:
-                        features['is_src'].append(True)
-
-                # age
-                avg_time = 0
-                commiters = set()
-                for j in range(nbr_files):
-                    file_path = c_response['files'][j]['filename']
-                    file_edit_date = c_response['commit']['author']['date']
-
-                    file_mod_request = f"https://api.github.com/repos/{owner}/{repo}/commits?path={file_path}&until={file_edit_date}" #2022-06-01T23:59:59Z"
-                    dr = requests.get(file_mod_request, auth=(USERNAME, TOKEN))
-                    dr.raise_for_status()
-                    d_response = dr.json()
-                    
-                    if len(d_response)>=2:
-                        prev_date = d_response[1]['commit']['author']['date']
-                    else:
-                        prev_date = file_edit_date
-                    delta_t = delta_time(file_edit_date, prev_date)
-                    avg_time += delta_t
-
-                # nbr of dev (that modified each file in the commit)
-                    nbr_file_modifications = d_response.__len__()
-                    for k in range(nbr_file_modifications):
-                        commiters.add(d_response[k]['commit']['author']['name'])
-
-                features['age'].append(avg_time/nbr_files)
-                features['nbr_dev'].append(commiters.__len__())
-
+                
                 # dev_exp
-                author = response[i]['commit']['author']['name']
+                author = response[i]['author']['login']
                 date = response[i]['commit']['author']['date']
                 e_request = f"https://api.github.com/repos/{owner}/{repo}/commits?author={author}&until={date}&per_page=100"
                 er = requests.get(e_request, auth=(USERNAME, TOKEN))
