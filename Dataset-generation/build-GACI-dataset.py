@@ -6,7 +6,7 @@ from math import log2
 from datetime import datetime
 
 USERNAME = 'MaherDissem'
-TOKEN = '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' # Expires on Sat, Oct 22 2022. 
+TOKEN = '' # Expires on Sat, Oct 22 2022. 
 # 1,000 requests per hour per repository
 
 delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/360/24
@@ -109,7 +109,7 @@ def get_features(owner,repo):
 
                     # entropy    
                     file_changes = c_response['files'][j]['changes']
-                    entropy -= file_changes/(total_changes or 0.99)*log2(file_changes/(total_changes or 0.99)) # because total_changes==0 when the commit consists of a file upload
+                    entropy -= file_changes/(total_changes or 1)*log2((file_changes/(total_changes or 1) or 1)) # because total_changes==0 when the commit consists of a file upload
 
                     name = path.split('.')[0].upper()
                     ext = path.split('.')[-1].upper()
@@ -198,10 +198,10 @@ def get_features(owner,repo):
                         contrib_date = s_response[k]['commit']['author']['date']
                         contrib_age = delta_time(date, contrib_date)
                         time_deltas += contrib_age
-                    weighted_exp += time_deltas/len(s_response)
+                    weighted_exp += time_deltas/(len(s_response) or 1)
 
-                features['s_dev_exp'].append(total_commits/len(subsystems))
-                features['r_exp'].append(weighted_exp/len(subsystems))
+                features['s_dev_exp'].append(total_commits/(len(subsystems) or 1))
+                features['r_exp'].append(weighted_exp/(len(subsystems) or 1))
 
                 # 
 
