@@ -4,6 +4,8 @@ import pandas as pd
 import subprocess
 from math import log2
 from datetime import datetime
+import os
+from tqdm import tqdm
 
 USERNAME = 'MaherDissem'
 TOKEN = '' # Expires on Sat, Oct 22 2022. 
@@ -47,8 +49,8 @@ def get_features(owner,repo):
             l = len(response)
             if l==0:
                 break
-            for i in range(l): # for commit
-                print(features)
+            for i in tqdm(range(l)): # for commit
+                # print(features)
 
                 # sha
                 sha = response[i]['sha']
@@ -207,7 +209,9 @@ def get_features(owner,repo):
 
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
-        print(pd.DataFrame(features))
+        df = pd.DataFrame(features)
+        df.to_csv(os.path.join(os.curdir, 'dataset', f"{repo}.csv") ,index=False)
+
 
     except HTTPError as http_err:
         print(f'HTTP error occurred: {http_err}')
@@ -234,6 +238,7 @@ def uses_GA(owner,repo):
         print(f'Other error occurred: {err}')
 
 # uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
-get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
-get_features(owner="antongolub", repo="action-setup-bun")
+# get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
+# get_features(owner="antongolub", repo="action-setup-bun")
+get_features(owner="EasyPost", repo="easypost-java")
 
