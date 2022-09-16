@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 
 USERNAME = 'MaherDissem'
-TOKEN = '' 
+TOKEN = ' ' 
 # 1,000 requests per hour per repository
 
 delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/360/24
