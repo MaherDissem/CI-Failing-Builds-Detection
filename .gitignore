@@ -1,7 +1,7 @@
 __pycache__
 job_script/logging/
 
-dataset/
+**dataset/
 ordered-data/
 TT-selected-projects/
 utils/
@@ -10,3 +10,5 @@ utils/
 checkpoints/
 results/
 runs/
+
+graphql**
