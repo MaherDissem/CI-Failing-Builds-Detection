@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 
 USERNAME = 'MaherDissem'
-TOKEN = '' # Expires on Sat, Oct 22 2022. 
+TOKEN = '' 
 # 1,000 requests per hour per repository
 
 delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/360/24
@@ -34,6 +34,7 @@ def get_features(owner,repo):
     features['dev_exp'] = [] # number of previous commits of user to this repo
     features['s_dev_exp'] = [] # avg exp on each modified subsystem
     features['r_exp'] = [] # recent exp is experience weighted by timedeltas
+    save_every = 20
 
     # os.chdir("/home/maher") # to avoid git dublious ownership error
     # res = subprocess.check_output(f"if cd {repo}; then git pull; else git clone https://github.com/{owner}/{repo}.git; fi", shell=True)
@@ -61,7 +62,7 @@ def get_features(owner,repo):
                 features['messages'].append(commit_msg)
 
                 # ci skipped                
-                if "CI SKIP" in commit_msg.upper() or "SKIP CI" in commit_msg.upper() or "CI-SKIP" in commit_msg.upper() or "SKIP-CI" in commit_msg.upper():
+                if "CI" in commit_msg.upper() and "SKIP" in commit_msg.upper():
                     features['ci_skipped'].append(True)
                     count += 1
                 else:
@@ -128,7 +129,7 @@ def get_features(owner,repo):
                         meta_edit = True
 
                     # src_edit
-                    if ext in ["PY", "CPP", "JAVA"]:
+                    if ext in ["PY", "GO", "JS", "CPP", "JAVA"]:
                         src_edit = True
                     
                     # age
@@ -157,7 +158,7 @@ def get_features(owner,repo):
                 features['doc_edit'].append(doc_edit)
                 features['meta_edit'].append(meta_edit)
                 features['src_edit'].append(src_edit)
-                features['age'].append(avg_time/nbr_files)
+                features['age'].append(avg_time/(nbr_files or 1))
                 features['nbr_dev'].append(commiters.__len__())
                 
                 # nbr of added lines
@@ -175,7 +176,8 @@ def get_features(owner,repo):
                     features['is_fix'].append(False)
                 
                 # dev_exp
-                author = response[i]['author']['login']
+                # author = response[i]['author']['login'] # sometimes null for some reason
+                author = response[i]['commit']['author']['email']
                 date = response[i]['commit']['author']['date']
                 e_request = f"https://api.github.com/repos/{owner}/{repo}/commits?author={author}&until={date}&per_page=100"
                 er = requests.get(e_request, auth=(USERNAME, TOKEN))
@@ -205,18 +207,55 @@ def get_features(owner,repo):
                 features['s_dev_exp'].append(total_commits/(len(subsystems) or 1))
                 features['r_exp'].append(weighted_exp/(len(subsystems) or 1))
 
-                # 
+                # perodically saving data 
+                if i%save_every==0:
+                    df = pd.DataFrame(features)
+                    df.to_csv(os.path.join(os.curdir, 'GA-dataset', f"{repo}_{page}-{i}.csv") ,index=False)
 
             page += 1
         print(f"{count/total*100:.2f}% of commits are CI-skipped")
         df = pd.DataFrame(features)
-        df.to_csv(os.path.join(os.curdir, 'dataset', f"{repo}.csv") ,index=False)
+        df.to_csv(os.path.join(os.curdir, 'GA-dataset','dataset', f"{repo}.csv") ,index=False)
 
 
     except HTTPError as http_err:
         print(f'HTTP error occurred: {http_err}')
     # except Exception as err:
     #     print(f'Other error occurred: {err}')
+
+
+
+
+def get_ci_skip_perc(owner,repo):
+    try:
+        page = 0
+        count = 0; total = 0
+        while True:
+            request = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=100&page={page}"
+            r = requests.get(request, auth=(USERNAME, TOKEN))
+            r.raise_for_status()
+            response = r.json()
+            l = len(response)
+            if l==0:
+                break
+            for i in tqdm(range(l)): # for commit
+                # commit message
+                commit_msg = response[i]['commit']['message']
+
+                # ci skipped                
+                if "CI" in commit_msg.upper() and "SKIP" in commit_msg.upper():
+                    count += 1
+                total += 1
+
+            page += 1
+        print(f"{count/total*100:.2f}% of commits are CI-skipped")
+
+    except HTTPError as http_err:
+        print(f'HTTP error occurred: {http_err}')
+    # except Exception as err:
+    #     print(f'Other error occurred: {err}')
+
+
 
 
 def uses_GA(owner,repo):
@@ -240,5 +279,6 @@ def uses_GA(owner,repo):
 # uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
 # get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
 # get_features(owner="antongolub", repo="action-setup-bun")
-get_features(owner="EasyPost", repo="easypost-java")
+# get_features(owner="ipfs", repo="go-log")
+get_ci_skip_perc(owner="remedyred", repo="out")
 
