@@ -10,10 +10,11 @@ One of the main causes of these delays is that some commits needlessly start the
 Thus, withing the framework of this project, we aim to reduce the number of builds executed by skipping those deemed unnecessary.
 
 This repository contains:
+- Generation of a commit history dataset for open-source projects consisting of 20 commit-level features for CI-skip prediction using GitHub's REST API.
 - Benchmark of different Machine Learning models for CI skip commits detection on the TravisTorrent dataset.
-- Using a Genetic Algorithm to detect the optimal CI-skip decision rule using Binary Tree representation of rules. implementation of [1]
+- Using a Genetic Algorithm to detect the optimal CI-skip decision rule using Binary Tree representation of IF-THEN rules. implementation of [1]
 - Hyper Parameter Optimization of ML/DL models using Genetic Algorithms. implementation of [2]
-- A novel Deep Reinforcement Learning based approach to build an optimal decision tree that account for data imbalance to classify commits. inspired by [3]
+- A novel Deep Reinforcement Learning based approach to build an optimal decision tree that accounts for data imbalance to classify commits. inspired by [3]
 
 [1] Detecting continuous integration skip commits using multi-objective evolutionary search, Islem Saidani, Ali Ouni, and Mohamed Wiem Mkaouer
 
