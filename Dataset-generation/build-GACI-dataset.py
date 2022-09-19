@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 
 USERNAME = 'MaherDissem'
-TOKEN = ' ' 
+TOKEN = '' 
 # 1,000 requests per hour per repository
 
 delta_time = lambda date1, date2 : (datetime.strptime(date1,'%Y-%m-%dT%H:%M:%SZ') - datetime.strptime(date2,'%Y-%m-%dT%H:%M:%SZ')).total_seconds()/360/24
@@ -129,7 +129,7 @@ def get_features(owner,repo):
                         meta_edit = True
 
                     # src_edit
-                    if ext in ["PY", "GO", "JS", "CPP", "JAVA"]:
+                    if ext in ["PY", "GO", "JS", "CPP", "C", "H", "JSON", "JAVA"]:
                         src_edit = True
                     
                     # age
@@ -238,17 +238,19 @@ def get_ci_skip_perc(owner,repo):
             l = len(response)
             if l==0:
                 break
-            for i in tqdm(range(l)): # for commit
+            # for i in tqdm(range(l)): # for commit
+            for i in range(l): # for commit
                 # commit message
                 commit_msg = response[i]['commit']['message']
 
                 # ci skipped                
-                if "CI" in commit_msg.upper() and "SKIP" in commit_msg.upper():
+                if "CI" in commit_msg.upper() and "SKIP" in commit_msg.upper() or "CI" in commit_msg.upper() and "NO" in commit_msg.upper() or "SKIP" in commit_msg.upper() and "ACTIONS" in commit_msg.upper():
                     count += 1
                 total += 1
 
             page += 1
-        print(f"{count/total*100:.2f}% of commits are CI-skipped")
+        print(f"> {count/total*100:.2f}% of {total} commits are CI-skipped")
+        return f"{count/total*100:.2f}% of {total} commits are CI-skipped"
 
     except HTTPError as http_err:
         print(f'HTTP error occurred: {http_err}')
@@ -272,13 +274,49 @@ def uses_GA(owner,repo):
         return False
 
     except HTTPError as http_err:
+        return
         print(f'HTTP error occurred: {http_err}')
     except Exception as err:
+        return
         print(f'Other error occurred: {err}')
+
+
+
+
+def find_GACIskip_repos():
+    id = 30000
+    while True:
+        try:
+            request = f"https://api.github.com/repositories?since={id}"
+            r = requests.get(request, auth=(USERNAME, TOKEN))
+            r.raise_for_status()
+            response = r.json()
+            l = len(response)
+            for i in range(l):
+                owner, repo = response[i]['full_name'].split('/')
+                if uses_GA(owner, repo):
+                    print(owner, repo)
+                    perc = get_ci_skip_perc(owner,repo)
+                    with open("projects.txt", "a") as file:
+                        file.write(owner + '/' + repo + ': ' + perc + '\n')
+        
+        except HTTPError as http_err:
+            print(f'HTTP error occurred: {http_err}')
+        # except Exception as err:
+        #     print(f'Other error occurred: {err}')
+
+        finally:
+            if r.status_code==403:
+                print("403, requests quota exceeded")
+                return
+            id = response[i]['id']+1
+
+
+
 
 # uses_GA(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
 # get_features(owner="MaherDissem", repo="CI-SKIPPED-COMMITS-DETECTION")
 # get_features(owner="antongolub", repo="action-setup-bun")
 # get_features(owner="ipfs", repo="go-log")
-get_ci_skip_perc(owner="remedyred", repo="out")
-
+# get_ci_skip_perc(owner="remedyred", repo="out")
+find_GACIskip_repos()
